@@ -1,0 +1,67 @@
+$red: #c20000;
+$light-yellow: #fff8dc;
+$brown: #cd853f;
+
+.header {
+  background-color: $red;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  font-size: 1.5rem;
+}
+
+.main-content {
+  .left-section {
+    background-color: $light-yellow;
+    h2 {
+      font-size: 2.5rem;
+      font-weight: bold;
+      .text-red {
+        color: $red;
+      }
+      .text-brown {
+        color: $brown;
+      }
+    }
+    p {
+      margin-top: 1rem;
+    }
+  }
+
+  .right-section {
+    background: linear-gradient(to bottom, #fff9e8, #fff6dc);
+    .form-title {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .input-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      svg {
+        color: gray;
+      }
+    }
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      padding-left: 2.5rem;
+      border: 1px solid $brown;
+      border-radius: 0.5rem;
+    }
+    .submit-btn {
+      background-color: $red;
+      color: white;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      &.loading {
+        background-color: gray;
+      }
+    }
+  }
+}
