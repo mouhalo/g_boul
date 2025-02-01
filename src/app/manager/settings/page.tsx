@@ -406,10 +406,34 @@ export default function SettingsPage() {
     selectedType: number | 'all',
     onChange: (value: number | 'all') => void,
     label: string
-  ) => (
+  ) => {
+    // Déterminer les options à afficher en fonction de la section active
+    const getFilterOptions = () => {
+      if (activeSection === 'produits' && params?.typesUnite) {
+        return params.typesUnite.map(unite => ({
+          id: unite.id_type,
+          libelle: unite.libelle
+        }));
+      }
+      if (activeSection === 'articles' && params?.typesCuisson) {
+        return params.typesCuisson.map(unite => ({
+          id: unite.id_type,
+          libelle: unite.libelle
+        }));
+      }
+      return types.map(type => ({
+        id: type.id_type,
+        libelle: type.libelle
+      }));
+    };
+  
+
+  const filterOptions = getFilterOptions();
+
+  return (
     <div className="mb-6">
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        Filtrer par {label}
+        Filtrer par {activeSection === 'produits' ? 'unité' : label}
       </label>
       <div className={inputContainerStyle}>
         <Filter size={20} className={inputIconStyle} />
@@ -418,20 +442,24 @@ export default function SettingsPage() {
           onChange={(e) => onChange(e.target.value === 'all' ? 'all' : Number(e.target.value))}
           className={`${inputWithIconStyle} ${inputTextStyle} cursor-pointer`}
         >
-          <option value="all">Tous les types</option>
-          {types.map((type) => (
-            <option key={type.id_type} value={type.id_type}>
-              {type.libelle}
+          <option value="all">
+            {activeSection === 'produits' ? 'Toutes les unités' : 'Tous les types'}
+          </option>
+          {filterOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.libelle}
             </option>
           ))}
         </select>
       </div>
     </div>
   );
+};
+
   const Modal = () => {
     if (!isModalOpen) return null;
   
-    // Gestion des modaux spécifiques pour sites, articles, clients et produits
+    // Gestion des modaux spécifiques pour sites, articles, clients et 
     switch (activeSection) {
       case 'sites':
         return (
