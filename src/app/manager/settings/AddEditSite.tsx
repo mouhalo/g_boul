@@ -14,7 +14,9 @@ interface Site {
   tel: string;
   nom_gerant: string;
 }
-
+interface SaveSiteResponse {
+  save_site: string;
+}
 interface AddEditSiteProps {
   isOpen: boolean;
   onClose: () => void;
@@ -60,11 +62,12 @@ export default function AddEditSite({ isOpen, onClose, site, bakeryId, onSuccess
         '${formData.adresse}',
         '${formData.tel}',        ${site?.id_site || 0}
       )`;
+      console.log('📤 Envoi de la requête save_site...', query);
+      const response = await envoyerRequeteApi<SaveSiteResponse[]>('boulangerie', query);
+      console.log('📦 Réponse save_site:', response);
 
-      console.log('📤 Envoi de la requête save_site...',query);
-      const response = await envoyerRequeteApi<'OK'>('boulangerie', query);
-
-      if (response === 'OK') {
+      if (response && response.length > 0 && response[0].save_site === 'OK') {
+        console.log('✅ Site sauvegardé avec succès');
         onSuccess();
         onClose();
       }

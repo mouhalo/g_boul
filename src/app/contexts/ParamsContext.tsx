@@ -30,6 +30,12 @@ interface Site {
   tel: string;
   nom_gerant: string;
 }
+interface Produit {
+  id_produit: number;
+  nom_produit: string;
+  id_unite: number;
+  nom_unite: string;
+}
 
 interface Client {
   id_client: number;
@@ -43,7 +49,6 @@ interface Client {
 }
 
 export interface AppParams {
-  unites?: TypeVariable[];
   typesCuisson?: TypeVariable[];
   typesUnite?: TypeVariable[];
   typesRecette?: TypeVariable[];
@@ -51,10 +56,11 @@ export interface AppParams {
   typesDepense?: TypeVariable[];
   typesVente?: TypeVariable[];
   typesClient?: TypeVariable[];
+  produits?: Produit[];
   articles?: Article[];
   clients?: Client[];
   sites?: Site[];
-
+  les_unites?: TypeVariable[];
 }
 
 
@@ -112,12 +118,13 @@ export function ParamsProvider({ children }: { children: React.ReactNode }) {
       const data = response[0].get_all_params;
       console.log('📊 Données par type:');
       console.log('- Articles:', data.les_articles?.length ?? 0);
+      console.log('- Produits:', data.les_produits?.length ?? 0);
       console.log('- Clients:', data.les_clients?.length ?? 0);
       console.log('- Unités:', data.les_unites?.length ?? 0);
       console.log('- Sites:', data.les_sites?.length ?? 0);
       console.log('- Types:', {
         cuisson: data.les_types_cuisson?.length ?? 0,
-        unite: data.les_types_unite?.length ?? 0,
+        unite: data.les_unites?.length ?? 0,
         recette: data.les_types_recette?.length ?? 0,
         profil: data.les_types_profil?.length ?? 0,
         depense: data.les_types_depense?.length ?? 0,
@@ -131,11 +138,12 @@ export function ParamsProvider({ children }: { children: React.ReactNode }) {
         unites: data.les_unites || [],
         sites: data.les_sites || [],
         typesCuisson: data.les_types_cuisson || [],
-        typesUnite: data.les_types_unite || [],
+        typesUnite: data.les_unites || [],
         typesRecette: data.les_types_recette || [],
         typesProfil: data.les_types_profil || [],
         typesDepense: data.les_types_depense || [],
         typesVente: data.les_types_vente || [],
+        produits: data.les_produits || [],
         typesClient: data.les_types_client || []
       };
       

@@ -15,6 +15,10 @@ interface Client {
   actif: boolean;
 }
 
+interface SaveClientResponse {
+  save_client: string;
+}
+
 interface Site {
   id_site: number;
   nom_site: string;
@@ -82,10 +86,12 @@ export default function AddEditClient({
         ${client?.id_client || 0}
       )`;
 
-      console.log('📤 Envoi de la requête save_client...');
-      const response = await envoyerRequeteApi<'OK'>('boulangerie', query);
+      console.log('📤 Envoi de la requête save_client...', query);
+      const response = await envoyerRequeteApi<SaveClientResponse[]>('boulangerie', query);
+      console.log('📦 Réponse save_client:', response);
 
-      if (response === 'OK') {
+      if (response && response.length > 0 && response[0].save_client === 'OK') {
+        console.log('✅ Client sauvegardé avec succès');
         onSuccess();
         onClose();
       }

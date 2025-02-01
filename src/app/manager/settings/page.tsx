@@ -9,13 +9,14 @@ import { envoyerRequeteApi, ApiError } from '@/app/apis/api';
 import Image from 'next/image';
 import AddEditSite from './AddEditSite';
 import AddEditArticle from './AddEditArticle';
-import AddEditClient from './AddEditClient';;
+import AddEditClient from './AddEditClient';
+import AddEditProduit from './AddEditProduit'; // Importer le composant AddEditProduit
 import { 
   Upload, 
   Edit2, 
   Trash2, 
   Building2,
-
+  Edit,
   Store,
   AtSign,
   Phone,
@@ -75,6 +76,12 @@ interface Article {
   pu_revente: number;
   nb_jour: number;
 }
+interface Produit {
+  id_produit: number;
+  nom_produit: string;
+  id_unite: number;
+  nom_unite: string;
+}
 
 interface Client {
   id_client: number;
@@ -98,6 +105,7 @@ type MenuSection =
   | 'sites'
   | 'articles'
   | 'clients'
+  | 'produits'
   | 'unites'
   | 'typesCuisson'
   | 'typesUnite'
@@ -118,12 +126,14 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<MenuSection>('boulangerie');
   const [selectedArticleType, setSelectedArticleType] = useState<number | 'all'>('all');
   const [selectedClientType, setSelectedClientType] = useState<number | 'all'>('all');
+  const [selectedProduitUnite, setSelectedProduitUnite] = useState<number | 'all'>('all');
   
   // États pour les modaux
   const [editingType, setEditingType] = useState<TypeVariable | null>(null);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editingProduit, setEditingProduit] = useState<Produit | null>(null);
   const [newTypeLibelle, setNewTypeLibelle] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -154,6 +164,7 @@ export default function SettingsPage() {
     { id: 'sites', label: 'Sites', icon: <Building2 size={20} /> },
     { id: 'articles', label: 'Articles', icon: <Package size={20} /> },
     { id: 'clients', label: 'Clients', icon: <Users size={20} /> },
+    { id: 'produits', label: 'Produits', icon: <Tag size={20} /> },
     { id: 'unites', label: 'Unités', icon: <Scale size={20} /> },
     { id: 'typesCuisson', label: 'Types de Cuisson', icon: <Cookie size={20} /> },
     { id: 'typesUnite', label: "Types d'Unité", icon: <Settings2 size={20} /> },
@@ -198,7 +209,7 @@ export default function SettingsPage() {
   const handleSaveType = async (libelle: string, id_type: number = 0) => {
     // Liste des sections valides pour TypeVariable
     const validTypeVariableSections = [
-      'unites',
+      'les_unites',
       'typesCuisson',
       'typesUnite',
       'typesRecette',
@@ -227,7 +238,7 @@ export default function SettingsPage() {
         nom_variable = 'UNITE';
         break;
       case 'typesRecette':
-        nom_variable = 'RECIPE';
+        nom_variable = 'RECETTE';
         break;
       case 'typesProfil':
         nom_variable = 'AGENT';
@@ -279,11 +290,12 @@ export default function SettingsPage() {
               libelle,
               nom_variable
             }]
-          : currentParams.map((t: TypeVariable) =>
-              t.id_type === id_type
-                ? { ...t, libelle }
-                : t
-            );
+          : currentParams.map((t) => {
+              if ('id_type' in t) {
+                return t.id_type === id_type ? { ...t, libelle } : t;
+              }
+              return t;
+            });
   
         // Création du nouvel objet params
         const newParams: AppParams = {
@@ -327,6 +339,9 @@ export default function SettingsPage() {
       case 'clients':
         setEditingClient(null);
         break;
+      case 'produits':
+        setEditingProduit(null);
+        break;
       default:
         setEditingType(null);
         setNewTypeLibelle('');
@@ -334,7 +349,7 @@ export default function SettingsPage() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (item: TypeVariable | Site | Article | Client) => {
+  const handleEdit = (item: TypeVariable | Site | Article | Client | Produit ) => {
     switch (activeSection) {
       case 'sites':
         setEditingSite(item as Site);
@@ -344,6 +359,9 @@ export default function SettingsPage() {
         break;
       case 'clients':
         setEditingClient(item as Client);
+        break;
+      case 'produits':
+        setEditingProduit(item as Produit);
         break;
       default:
         if ('libelle' in item && 'nom_variable' in item) {
@@ -372,6 +390,8 @@ export default function SettingsPage() {
         break;
       case 'articles':
       case 'clients':
+      case 'produits':
+        
         // Rafraîchir via params
         break;
       default:
@@ -411,7 +431,7 @@ export default function SettingsPage() {
   const Modal = () => {
     if (!isModalOpen) return null;
   
-    // Gestion des modaux spécifiques pour sites, articles et clients
+    // Gestion des modaux spécifiques pour sites, articles, clients et produits
     switch (activeSection) {
       case 'sites':
         return (
@@ -445,6 +465,24 @@ export default function SettingsPage() {
             bakeryId={user?.bakeryId || 0}
             sites={sites}
             typesClient={params?.typesClient || []}
+            onSuccess={handleSuccess}
+          />
+        );
+  
+      case 'produits':
+        // Convertir TypeVariable[] en Unite[]
+        const unites = (params?.typesUnite || []).map(type => ({
+          id_unite: type.id_type,
+          nom_unite: type.libelle
+        }));
+        
+        return (
+          <AddEditProduit
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            produit={editingProduit || undefined}
+            bakeryId={user?.bakeryId || 0}
+            unites={unites}
             onSuccess={handleSuccess}
           />
         );
@@ -829,6 +867,46 @@ export default function SettingsPage() {
             </div>
           </>
         );
+
+      case 'produits': {
+        const produits = params?.produits || [];
+        const filteredProduits = selectedProduitUnite === 'all'
+          ? produits
+          : produits.filter(p => p.id_unite === selectedProduitUnite);
+
+        return (
+          <div>
+            {renderFilterSelect(
+              params?.les_unites || [],
+              selectedProduitUnite,
+              (value) => setSelectedProduitUnite(value),
+              'unité'
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredProduits.map((produit) => (
+                <motion.div
+                  key={produit.id_produit}
+                  className={commonCardStyle}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className={actionButtonsStyle}>
+                    <button
+                      onClick={() => handleEdit(produit)}
+                      className="p-1 hover:bg-gray-100 rounded"
+                    >
+                      <Edit size={16} className="text-blue-500" />
+                    </button>
+                  </div>
+                  <h3 className="font-semibold mb-2 text-lg text-[#7e630c]">{produit.nom_produit}</h3>
+                  <p className="text-sm text-gray-600">Unité: {produit.nom_unite}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        );
+      }
 
       // Rendu générique pour les types variables
       default:

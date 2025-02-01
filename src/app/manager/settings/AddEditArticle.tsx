@@ -45,6 +45,8 @@ export default function AddEditArticle({
     pu_revente: 0,
     nb_jour: 1
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputTextStyle = "text-[#7e630c]";
   useEffect(() => {
     if (article) {
@@ -60,8 +62,15 @@ export default function AddEditArticle({
     }));
   };
 
+  // Interface pour la réponse de l'API
+  interface SaveArticleResponse {
+    save_article: string;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+
     try {
       const query = `SELECT * FROM public.save_article(
         ${bakeryId},
@@ -74,17 +83,27 @@ export default function AddEditArticle({
         ${article?.id_article || 0}
       )`;
 
-      console.log('📤 Envoi de la requête save_article...',query);
-      const response = await envoyerRequeteApi<'OK'>('boulangerie', query);
+      console.log('📤 Envoi de la requête save_article...', query);
+      const response = await envoyerRequeteApi<SaveArticleResponse[]>('boulangerie', query);
       console.log('📦 Réponse save_article:', response);
-      if (response === 'OK') {
+
+      if (response && response.length > 0 && response[0].save_article === 'OK') {
+        console.log('✅ Article sauvegardé avec succès');
         onSuccess();
         onClose();
+      } else {
+        console.error('❌ Erreur lors de la sauvegarde de l\'article:', response);
+        throw new Error('La sauvegarde de l\'article a échoué');
       }
     } catch (error) {
+      console.error('❌ Erreur lors de la sauvegarde:', error);
       if (error instanceof ApiError) {
-        console.error('❌ Erreur lors de la sauvegarde:', error.message);
+        setError(error.message);
+      } else {
+        setError('Une erreur est survenue lors de la sauvegarde de l\'article');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -217,10 +236,16 @@ export default function AddEditArticle({
             <button
               type="submit"
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              disabled={loading}
             >
               {article ? 'Modifier' : 'Ajouter'}
             </button>
           </div>
+          {error && (
+            <div className="text-red-500 mt-2">
+              {error}
+            </div>
+          )}
         </form>
       </div>
     </div>
