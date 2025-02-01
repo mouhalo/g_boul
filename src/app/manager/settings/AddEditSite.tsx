@@ -39,6 +39,8 @@ export default function AddEditSite({ isOpen, onClose, site, bakeryId, onSuccess
     }
   }, [site]);
 
+  const inputTextStyle = "text-[#7e630c]";
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
@@ -54,14 +56,12 @@ export default function AddEditSite({ isOpen, onClose, site, bakeryId, onSuccess
         ${bakeryId},
         '${formData.code_site}',
         '${formData.nom_site}',
-        '${formData.adresse}',
-        '${formData.tel}',
         '${formData.nom_gerant}',
-        ${formData.actif},
-        ${site?.id_site || 0}
+        '${formData.adresse}',
+        '${formData.tel}',        ${site?.id_site || 0}
       )`;
 
-      console.log('📤 Envoi de la requête save_site...');
+      console.log('📤 Envoi de la requête save_site...',query);
       const response = await envoyerRequeteApi<'OK'>('boulangerie', query);
 
       if (response === 'OK') {
@@ -99,7 +99,7 @@ export default function AddEditSite({ isOpen, onClose, site, bakeryId, onSuccess
                 name="code_site"
                 value={formData.code_site}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 placeholder="Code du site"
                 required
               />
@@ -115,7 +115,7 @@ export default function AddEditSite({ isOpen, onClose, site, bakeryId, onSuccess
                 name="nom_site"
                 value={formData.nom_site}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 placeholder="Nom du site"
                 required
               />
@@ -131,7 +131,7 @@ export default function AddEditSite({ isOpen, onClose, site, bakeryId, onSuccess
                 name="nom_gerant"
                 value={formData.nom_gerant}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 placeholder="Nom du gérant"
                 required
               />
@@ -147,7 +147,7 @@ export default function AddEditSite({ isOpen, onClose, site, bakeryId, onSuccess
                 name="tel"
                 value={formData.tel}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 placeholder="Numéro de téléphone"
                 required
               />
@@ -162,7 +162,7 @@ export default function AddEditSite({ isOpen, onClose, site, bakeryId, onSuccess
                 name="adresse"
                 value={formData.adresse}
                 onChange={handleInputChange}
-                className={`${inputWithIconStyle} min-h-[80px] pt-2`}
+                className={`${inputWithIconStyle} min-h-[80px] pt-2 ${inputTextStyle}`}
                 placeholder="Adresse du site"
                 required
               />

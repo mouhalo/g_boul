@@ -45,7 +45,7 @@ export default function AddEditArticle({
     pu_revente: 0,
     nb_jour: 1
   });
-
+  const inputTextStyle = "text-[#7e630c]";
   useEffect(() => {
     if (article) {
       setFormData(article);
@@ -65,18 +65,18 @@ export default function AddEditArticle({
     try {
       const query = `SELECT * FROM public.save_article(
         ${bakeryId},
-        '${formData.nom_article}',
         ${formData.id_type},
-        ${formData.pu_livreur},
+        '${formData.nom_article}',        
         ${formData.pu_boutique},
         ${formData.pu_revente},
+        ${formData.pu_livreur},
         ${formData.nb_jour},
         ${article?.id_article || 0}
       )`;
 
-      console.log('📤 Envoi de la requête save_article...');
+      console.log('📤 Envoi de la requête save_article...',query);
       const response = await envoyerRequeteApi<'OK'>('boulangerie', query);
-
+      console.log('📦 Réponse save_article:', response);
       if (response === 'OK') {
         onSuccess();
         onClose();
@@ -112,7 +112,7 @@ export default function AddEditArticle({
                 name="nom_article"
                 value={formData.nom_article}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 placeholder="Nom de l'article"
                 required
               />
@@ -120,14 +120,14 @@ export default function AddEditArticle({
           </div>
 
           <div className={inputContainerStyle}>
-            <label className={labelStyle}>Type article</label>
+            <label className={labelStyle + " " + inputTextStyle} >Type article</label>
             <div className="relative">
               <Tag size={20} className={inputIconStyle} />
               <select
                 name="id_type"
                 value={formData.id_type}
                 onChange={handleInputChange}
-                className={`${inputWithIconStyle} cursor-pointer`}
+                className={`${inputWithIconStyle} ${inputTextStyle} cursor-pointer`}
                 required
               >
                 {typesVente.map(type => (
@@ -148,7 +148,7 @@ export default function AddEditArticle({
                 name="pu_livreur"
                 value={formData.pu_livreur}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 min="0"
                 step="0.01"
                 required
@@ -165,7 +165,7 @@ export default function AddEditArticle({
                 name="pu_boutique"
                 value={formData.pu_boutique}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 min="0"
                 step="0.01"
                 required
@@ -182,7 +182,7 @@ export default function AddEditArticle({
                 name="pu_revente"
                 value={formData.pu_revente}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 min="0"
                 step="0.01"
                 required
@@ -199,7 +199,7 @@ export default function AddEditArticle({
                 name="nb_jour"
                 value={formData.nb_jour}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 min="1"
                 required
               />

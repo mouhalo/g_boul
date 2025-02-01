@@ -58,7 +58,8 @@ export default function AddEditClient({
       setFormData(client);
     }
   }, [client]);
-
+  const inputTextStyle = "text-[#7e630c]";
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
@@ -119,7 +120,7 @@ export default function AddEditClient({
                 name="nom_client"
                 value={formData.nom_client}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 placeholder="Nom du client"
                 required
               />
@@ -134,7 +135,7 @@ export default function AddEditClient({
                 name="id_site"
                 value={formData.id_site}
                 onChange={handleInputChange}
-                className={`${inputWithIconStyle} cursor-pointer`}
+                className={`${inputWithIconStyle} cursor-pointer ${inputTextStyle}`}
                 required
               >
                 {sites.map(site => (
@@ -154,7 +155,7 @@ export default function AddEditClient({
                 name="id_type"
                 value={formData.id_type}
                 onChange={handleInputChange}
-                className={`${inputWithIconStyle} cursor-pointer`}
+                className={`${inputWithIconStyle} cursor-pointer ${inputTextStyle}`}
                 required
               >
                 {typesClient.map(type => (
@@ -175,7 +176,7 @@ export default function AddEditClient({
                 name="tel_client"
                 value={formData.tel_client}
                 onChange={handleInputChange}
-                className={inputWithIconStyle}
+                className={inputWithIconStyle + " " + inputTextStyle}
                 placeholder="Numéro de téléphone"
                 required
               />
@@ -190,7 +191,7 @@ export default function AddEditClient({
                 name="adresse"
                 value={formData.adresse}
                 onChange={handleInputChange}
-                className={`${inputWithIconStyle} min-h-[80px] pt-2`}
+                className={`${inputWithIconStyle} min-h-[80px] pt-2 ${inputTextStyle}`}
                 placeholder="Adresse du client"
                 required
               />

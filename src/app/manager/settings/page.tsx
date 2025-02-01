@@ -215,15 +215,44 @@ export default function SettingsPage() {
       console.error('❌ Section invalide pour TypeVariable:', activeSection);
       return;
     }
-  
+    let nom_variable = '';
+    switch (activeSection) {
+      case 'unites':
+        nom_variable = 'UNITE';
+        break;
+      case 'typesCuisson':
+        nom_variable = 'CUISSON';
+        break;
+      case 'typesUnite':
+        nom_variable = 'UNITE';
+        break;
+      case 'typesRecette':
+        nom_variable = 'RECIPE';
+        break;
+      case 'typesProfil':
+        nom_variable = 'AGENT';
+        break;
+      case 'typesDepense':
+        nom_variable = 'DEPENSE';
+        break;
+      case 'typesVente':
+        nom_variable = 'VENTE';
+        break;
+      case 'typesClient':
+        nom_variable = 'CLIENT';
+        break;
+      default:
+        console.error('❌ Section non valide:', activeSection);
+        return;
+    }
     try {
       console.log('🚀 Début de la sauvegarde du type', {
-        section: activeSection,
+        section: nom_variable,
         libelle,
         id_type
       });
   
-      const nom_variable = activeSection.toUpperCase();
+      
       const query = `
         SELECT * FROM public.save_parametres(
           ${user?.bakeryId}, 
@@ -402,7 +431,7 @@ export default function SettingsPage() {
             onClose={() => setIsModalOpen(false)}
             article={editingArticle || undefined}
             bakeryId={user?.bakeryId || 0}
-            typesVente={params?.typesVente || []}
+            typesVente={params?.typesCuisson || []}
             onSuccess={handleSuccess}
           />
         );
