@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { UserProvider } from './providers/UserProvider';
 import { ParamsProvider } from './contexts/ParamsContext';
+import { ToastProvider } from '@/components/ui/toast';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,7 +23,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <UserProvider>
           <ParamsProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </ParamsProvider>
         </UserProvider>
       </body>

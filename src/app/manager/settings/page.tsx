@@ -1,6 +1,5 @@
 'use client';
 
-
 import { useState, useEffect } from 'react';
 import useLogin from '@/app/hooks/useLogin';
 import { AppParams } from '@/app/contexts/ParamsContext';
@@ -37,8 +36,7 @@ import {
   ChevronRight,
   Filter
 } from 'lucide-react';
-
-
+import { useToast } from "@/components/ui/toast";
 
 // Types existants
 interface Site {
@@ -121,8 +119,12 @@ interface MenuItem {
   icon: React.ReactNode;
 }
 
+type DeletableItem = TypeVariable | Site | Article | Client | Produit;
+
 export default function SettingsPage() {
-  const { user, params,setParams } = useLogin();
+  const { user, params, setParams } = useLogin();
+
+  const { toast } = useToast();
   const [activeSection, setActiveSection] = useState<MenuSection>('boulangerie');
   const [selectedArticleType, setSelectedArticleType] = useState<number | 'all'>('all');
   const [selectedClientType, setSelectedClientType] = useState<number | 'all'>('all');
@@ -136,6 +138,8 @@ export default function SettingsPage() {
   const [editingProduit, setEditingProduit] = useState<Produit | null>(null);
   const [newTypeLibelle, setNewTypeLibelle] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<DeletableItem | null>(null);
 
   const [settings, setSettings] = useState<Settings>({
     id_boul: 0,
@@ -349,7 +353,7 @@ export default function SettingsPage() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (item: TypeVariable | Site | Article | Client | Produit ) => {
+  const handleEdit = (item: DeletableItem) => {
     switch (activeSection) {
       case 'sites':
         setEditingSite(item as Site);
@@ -371,35 +375,229 @@ export default function SettingsPage() {
     }
     setIsModalOpen(true);
   };
-
-  const handleDelete = (item: TypeVariable | Site | Article | Client) => {
-    console.log('🗑️ Supprimer dans la section:', activeSection, item);
+  const handleDelete = (item: DeletableItem) => {
+    console.log('🗑️ Suppression de:', item);
+    setItemToDelete(item);
+    setIsDeleteDialogOpen(true);
   };
 
-  const handleSuccess = () => {
-    // Rafraîchir les données selon la section
-    switch (activeSection) {
-      case 'sites':
-        if (user?.sites) {
-          setSites(user.sites.filter(site => site.actif).map(site => ({
-            ...site,
-            id_site: Number(site.id_site),
-            id_boul: Number(site.id_boul)
-          })));
-        }
-        break;
-      case 'articles':
-      case 'clients':
-      case 'produits':
-        
-        // Rafraîchir via params
-        break;
-      default:
-        // Rafraîchir les types simples
-        break;
+  const confirmDelete = async () => {
+    if (!itemToDelete || !user?.bakeryId) {
+      console.log('❌ Données manquantes:', { itemToDelete, bakeryId: user?.bakeryId });
+      return;
+    }
+  
+    try {
+      console.log('🚀 Début de la suppression...', {
+        activeSection,
+        itemToDelete,
+        bakeryId: user.bakeryId
+      });
+  
+      // Helper function to determine if item is TypeVariable
+      const isTypeVariable = (item: DeletableItem): item is TypeVariable => {
+        return 'nom_variable' in item && 'libelle' in item;
+      };
+
+      // Détermination du type de paramètre et de l'ID
+      const paramType = activeSection === 'sites' ? 'site' : 
+                       activeSection === 'articles' ? 'article' : 
+                       activeSection === 'clients' ? 'client' : 
+                       activeSection === 'produits' ? 'produit' : 
+                       isTypeVariable(itemToDelete) ? itemToDelete.nom_variable :
+                       activeSection;
+
+      console.log('🔍 Type de paramètre déterminé:', paramType);
+  
+      const paramId = activeSection === 'clients' ? (itemToDelete as Client).id_client : 
+                     activeSection === 'sites' ? (itemToDelete as Site).id_site :
+                     activeSection === 'articles' ? (itemToDelete as Article).id_article :
+                     activeSection === 'produits' ? (itemToDelete as Produit).id_produit :
+                     (itemToDelete as TypeVariable).id_type;
+  
+      console.log('📊 Paramètres de suppression:', {
+        paramType,
+        paramId,
+        siteId: user.id_site
+      });
+  
+      const query = `SELECT * FROM delete_param(
+        '${paramType}',
+        ${user.bakeryId},
+        ${paramId},
+        ${activeSection === 'clients' ? user.id_site : 0}
+      )`;
+  
+      console.log('📝 Requête de suppression:', query);
+      
+      const response = await envoyerRequeteApi('boulangerie', query);
+      console.log('📨 Réponse reçue:', response);
+  
+      if (response === 'NOK') {
+        console.error('❌ La suppression a échoué');
+        throw new Error('La suppression a échoué');
+      }
+  
+      console.log('✅ Suppression réussie');
+      
+      // Mise à jour du state local après suppression réussie
+      handleSuccess();
+  
+      toast({
+        title: "Succès",
+        description: "Élément supprimé avec succès",
+        variant: "success"
+      });
+  
+    } catch (error) {
+      console.error('🚨 Erreur lors de la suppression:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression",
+        variant: "destructive"
+      });
+    } finally {
+      console.log('🏁 Nettoyage final');
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
+// Composant de dialogue de confirmation
+const DeleteConfirmationDialog = () => {
+  if (!isDeleteDialogOpen || !itemToDelete) return null;
+
+  const itemName = 'nom_site' in itemToDelete 
+    ? itemToDelete.nom_site 
+    : 'nom_article' in itemToDelete 
+    ? itemToDelete.nom_article
+    : 'nom_client' in itemToDelete
+    ? itemToDelete.nom_client
+    : 'nom_produit' in itemToDelete
+    ? itemToDelete.nom_produit
+    : itemToDelete.libelle;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+        <h3 className="text-lg font-semibold mb-4">Confirmer la suppression</h3>
+        <p className="mb-6 text-gray-600">
+          Êtes-vous sûr de vouloir supprimer &ldquo;{itemName}&rdquo; ? 
+          Cette action est irréversible.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => {
+              setIsDeleteDialogOpen(false);
+              setItemToDelete(null);
+            }}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={confirmDelete}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const handleSuccess = async () => {
+  try {
+    console.log('🔄 Rafraîchissement des données après suppression...');
+    
+    if (!user?.bakeryId) {
+      console.error('❌ ID boulangerie manquant');
+      return;
+    }
+
+    // Pour les sites, on rafraîchit directement depuis les données user
+    if (activeSection === 'sites' && user?.sites) {
+      console.log('🏢 Rafraîchissement des sites');
+      setSites(user.sites.filter(site => site.actif).map(site => ({
+        ...site,
+        id_site: Number(site.id_site),
+        id_boul: Number(site.id_boul)
+      })));
+      return;
+    }
+
+    // Pour les autres sections, on met à jour les paramètres
+    if (params) {
+      const updatedParams = { ...params };
+      
+      // Mettre à jour le state en fonction de la section active
+      switch (activeSection) {
+        case 'articles':
+          if (updatedParams.articles) {
+            updatedParams.articles = updatedParams.articles.filter(
+              a => a.id_article !== (itemToDelete as Article).id_article
+            );
+          }
+          break;
+
+        case 'clients':
+          if (updatedParams.clients) {
+            updatedParams.clients = updatedParams.clients.filter(
+              c => c.id_client !== (itemToDelete as Client).id_client
+            );
+          }
+          break;
+
+        case 'produits':
+          if (updatedParams.produits) {
+            updatedParams.produits = updatedParams.produits.filter(
+              p => p.id_produit !== (itemToDelete as Produit).id_produit
+            );
+          }
+          break;
+
+        case 'unites':
+        case 'typesCuisson':
+        case 'typesUnite':
+        case 'typesRecette':
+        case 'typesProfil':
+        case 'typesDepense':
+        case 'typesVente':
+        case 'typesClient':
+          {
+            const paramKey = activeSection as keyof Pick<AppParams, 'typesCuisson' | 'typesUnite' | 'typesRecette' | 'typesProfil' | 'typesDepense' | 'typesVente' | 'typesClient' | 'les_unites'>;
+            const currentParams = updatedParams[paramKey];
+            
+            if (currentParams && Array.isArray(currentParams)) {
+              updatedParams[paramKey] = (currentParams as TypeVariable[]).filter(
+                t => t.id_type !== (itemToDelete as TypeVariable).id_type
+              );
+            }
+          }
+          break;
+      }
+
+      // Mettre à jour le state avec les nouvelles données
+      setParams(updatedParams);
+      console.log('✅ Paramètres mis à jour localement');
+    }
+
+    toast({
+      title: "Succès",
+      description: "Les données ont été mises à jour",
+      variant: "success"
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur lors du rafraîchissement:', error);
+    toast({
+      title: "Erreur",
+      description: "Impossible de rafraîchir les données",
+      variant: "destructive"
+    });
+  }
+};
 
   const renderFilterSelect = (
     types: TypeVariable[],
@@ -490,7 +688,6 @@ export default function SettingsPage() {
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
             client={editingClient || undefined}
-            bakeryId={user?.bakeryId || 0}
             sites={sites}
             typesClient={params?.typesClient || []}
             onSuccess={handleSuccess}
@@ -1033,6 +1230,7 @@ export default function SettingsPage() {
         {renderContent()}
       </div>
 	   {isModalOpen && <Modal />}
+     <DeleteConfirmationDialog />
     </div>
   );
 }

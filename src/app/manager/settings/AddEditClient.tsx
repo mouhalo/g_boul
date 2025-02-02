@@ -33,7 +33,6 @@ interface AddEditClientProps {
   isOpen: boolean;
   onClose: () => void;
   client?: Client;
-  bakeryId: number;
   sites: Site[];
   typesClient: TypeClient[];
   onSuccess: () => void;
@@ -43,7 +42,6 @@ export default function AddEditClient({
   isOpen,
   onClose,
   client,
-  bakeryId,
   sites,
   typesClient,
   onSuccess
@@ -76,13 +74,11 @@ export default function AddEditClient({
     e.preventDefault();
     try {
       const query = `SELECT * FROM public.save_client(
-        ${bakeryId},
         ${formData.id_site},
-        '${formData.nom_client}',
-        ${formData.id_type},
+        '${formData.nom_client}',       
         '${formData.tel_client}',
         '${formData.adresse}',
-        ${formData.actif},
+         ${formData.id_type},    
         ${client?.id_client || 0}
       )`;
 
