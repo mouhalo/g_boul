@@ -48,7 +48,15 @@ interface Client {
   adresse: string;
   actif: boolean;
 }
-
+interface Fournisseur {
+  id_fournisseur: number;
+  nom_fournisseur: string;
+  id_boul: number;
+  tel_fournisseur: string;
+  adresse: string;
+  email: string;
+  actif: boolean;
+}
 export interface AppParams {
   typesCuisson?: TypeVariable[];
   typesUnite?: TypeVariable[];
@@ -62,6 +70,7 @@ export interface AppParams {
   clients?: Client[];
   sites?: Site[];
   les_unites?: TypeVariable[];
+  fournisseurs?: Fournisseur[];
 }
 
 
@@ -130,12 +139,14 @@ export function ParamsProvider({ children }: { children: React.ReactNode }) {
         profil: data.les_types_profil?.length ?? 0,
         depense: data.les_types_depense?.length ?? 0,
         vente: data.les_types_vente?.length ?? 0,
-        client: data.les_types_client?.length ?? 0
+        client: data.les_types_client?.length ?? 0,
+        fournisseur: data.les_fournisseurs?.length ?? 0
       });
 
       const paramsToSet = {
         articles: data.les_articles || [],
         clients: data.les_clients || [],
+        fournisseurs: data.les_fournisseurs || [],
         unites: data.les_unites || [],
         sites: data.les_sites || [],
         typesCuisson: data.les_types_cuisson || [],

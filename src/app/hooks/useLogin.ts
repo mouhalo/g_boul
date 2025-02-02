@@ -74,6 +74,8 @@ export default function useLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+
+  
   const handleLogin = async (formData: {
     code_boulangerie: string;
     login: string;
@@ -97,7 +99,7 @@ export default function useLogin() {
           '${formData.password}'
         );
       `;
-
+      console.log('Requete connnexion agent:',query)
       const response = await envoyerRequeteApi('boulangerie', query) as ConnexionAgentResponse[];
 
       if (response && response.length > 0) {

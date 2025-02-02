@@ -16,19 +16,21 @@ const inputVariants = {
 };
 
 export default function Home() {
- const { handleLogin, loading, error } = useLogin();
- const [formData, setFormData] = useState({
-   code_boulangerie: '',
-   login: '',
-   password: '',
- });
- const [focusedField, setFocusedField] = useState<string | null>(null);
- useEffect(() => {
-  console.log('Initial Form Data:', formData);
-}, [formData]);
- const handleSubmit = (e: React.FormEvent) => {
-   e.preventDefault();
-   console.log('Code Boulangerie:', formData.code_boulangerie);
+  const { handleLogin, loading, error } = useLogin();
+  const [formData, setFormData] = useState({
+    code_boulangerie: 'XV1VK',
+    login: 'mouhamed',
+    password: '777301221@'
+  });
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  useEffect(() => {
+    console.log('Initial Form Data:', formData);
+  }, [formData]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Code Boulangerie:', formData.code_boulangerie);
    handleLogin(formData);
  };
 
@@ -97,60 +99,59 @@ export default function Home() {
            </div>
 
            <form onSubmit={handleSubmit} className="space-y-4">
-             {['code_boulangerie', 'login', 'password'].map((field) => (
-               <motion.div
-               key={field}
-               variants={inputVariants}
-               animate={focusedField === field ? 'focus' : undefined}
-               className="relative"
-             >
-               {field === 'code_boulangerie' && <QrCode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />}
-               {field === 'login' && <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />}
-               {field === 'password' && <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />}
-               
-               <input
-                 type={field === 'password' ? 'password' : 'text'}
-                 placeholder={`Taper votre ${field === 'code_boulangerie' ? 'code_boulangerie' : field}`}
-                 value={formData[field as keyof typeof formData] ?? ''}
-                 onChange={(e) =>
-                   setFormData({ 
-                     ...formData, 
-                     [field]: field === 'code_boulangerie' ? e.target.value.toUpperCase() : e.target.value 
-                   })
-                 }
-                 onFocus={() => setFocusedField(field)}
-                 onBlur={() => setFocusedField(null)}
-                 className="w-full pl-10 pr-4 py-3 rounded-full border-2 border-red-600 focus:outline-none focus:border-lime-500 text-[#FF0000] bg-white"
-                 required
-                 disabled={loading}
-               />
-             </motion.div>
-             
-             ))}
+  {['code_boulangerie', 'login', 'password'].map((field) => (
+    <motion.div
+      key={field}
+      variants={inputVariants}
+      animate={focusedField === field ? 'focus' : undefined}
+      className="relative"
+    >
+      {field === 'code_boulangerie' && <QrCode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />}
+      {field === 'login' && <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />}
+      {field === 'password' && <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />}
+      
+      <input
+        type={field === 'password' ? 'password' : 'text'}
+        placeholder={`Taper votre ${field === 'code_boulangerie' ? 'code_boulangerie' : field}`}
+        value={formData[field as keyof typeof formData] ?? ''}
+        onChange={(e) =>
+          setFormData({ 
+            ...formData, 
+            [field]: field === 'code_boulangerie' ? e.target.value.toUpperCase() : e.target.value 
+          })
+        }
+        onFocus={() => setFocusedField(field)}
+        onBlur={() => setFocusedField(null)}
+        className="w-full pl-10 pr-4 py-3 rounded-full border-2 border-red-600 focus:outline-none focus:border-lime-500 text-[#FF0000] bg-white"
+        required
+        disabled={loading}
+      />
+    </motion.div>
+  ))}
 
-             {error && (
-               <motion.div 
-                 initial={{ opacity: 0, y: -10 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-lg"
-               >
-                 {error}
-               </motion.div>
-             )}
+  {error && (
+    <motion.div 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-lg"
+    >
+      {error}
+    </motion.div>
+  )}
 
-             <motion.button
-               type="submit"
-               disabled={loading}
-               whileHover={{ scale: 1.02 }}
-               whileTap={{ scale: 0.98 }}
-               className={`w-full flex items-center justify-center py-3 px-6 rounded-full 
-                 ${loading ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'} 
-                 text-white font-bold shadow-lg transition-all`}
-             >
-               <span>{loading ? 'Connexion...' : 'Entrer'}</span>
-               {!loading && <ChevronRight size={20} className="ml-2" />}
-             </motion.button>
-           </form>
+  <motion.button
+    type="submit"
+    disabled={loading}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+    className={`w-full flex items-center justify-center py-3 px-6 rounded-full 
+      ${loading ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'} 
+      text-white font-bold shadow-lg transition-all`}
+  >
+    <span>{loading ? 'Connexion...' : 'Entrer'}</span>
+    {!loading && <ChevronRight size={20} className="ml-2" />}
+  </motion.button>
+</form>
          </div>
        </motion.div>
      </main>

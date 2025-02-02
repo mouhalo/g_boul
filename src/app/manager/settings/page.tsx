@@ -8,10 +8,11 @@ import { envoyerRequeteApi, ApiError } from '@/app/apis/api';
 import Image from 'next/image';
 import AddEditSite from './AddEditSite';
 import AddEditArticle from './AddEditArticle';
+import AddEditFournisseur from './AddEditFournisseur';
 import AddEditClient from './AddEditClient';
 import AddEditProduit from './AddEditProduit'; // Importer le composant AddEditProduit
 import { 
-  Upload, 
+  Upload, Truck,
   Edit2, 
   Trash2, 
   Building2,
@@ -93,7 +94,15 @@ interface Client {
   adresse: string;
   actif: boolean;
 }
-
+interface Fournisseur {
+  id_fournisseur: number;
+  nom_fournisseur: string;
+  id_boul: number;
+  tel_fournisseur: string;
+  adresse: string;
+  email: string;
+  actif: boolean;
+}
 interface TypeVariable {
   id_type: number;
   libelle: string;
@@ -105,6 +114,7 @@ type MenuSection =
   | 'sites'
   | 'articles'
   | 'clients'
+  | 'fournisseurs'
   | 'produits'
   | 'unites'
   | 'typesCuisson'
@@ -121,7 +131,7 @@ interface MenuItem {
   icon: React.ReactNode;
 }
 
-type DeletableItem = TypeVariable | Site | Article | Client | Produit;
+type DeletableItem = TypeVariable | Site | Article | Client | Produit | Fournisseur;
 
 export default function SettingsPage() {
   const { user, params, setParams } = useLogin();
@@ -136,6 +146,7 @@ export default function SettingsPage() {
   const [editingType, setEditingType] = useState<TypeVariable | null>(null);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+  const [editingFournisseur, setEditingFournisseur] = useState<Fournisseur | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editingProduit, setEditingProduit] = useState<Produit | null>(null);
   const [newTypeLibelle, setNewTypeLibelle] = useState('');
@@ -170,6 +181,7 @@ export default function SettingsPage() {
     { id: 'sites', label: 'Sites', icon: <Building2 size={20} /> },
     { id: 'articles', label: 'Articles', icon: <Package size={20} /> },
     { id: 'clients', label: 'Clients', icon: <Users size={20} /> },
+    { id: 'fournisseurs', label: 'Fournisseurs', icon: <Users size={20} /> },
     { id: 'produits', label: 'Produits', icon: <Tag size={20} /> },
     { id: 'unites', label: 'Unités', icon: <Scale size={20} /> },
     { id: 'typesCuisson', label: 'Types de Cuisson', icon: <Cookie size={20} /> },
@@ -189,7 +201,7 @@ export default function SettingsPage() {
         ...prev,
         id_boul: user.bakeryId,
         nom_commercial: user.bakeryName,
-        sigle: '',
+        sigle: user.code_site	,
         nom_gerant: user.nom_gerant,
         adresse: user.adresse,
         tel_gerant: user.tel_site,
@@ -276,7 +288,8 @@ export default function SettingsPage() {
           '${nom_variable}',
           '${libelle}',
           1,
-          ${id_type}
+          ${id_type},
+          ${user?.id_site}
         )
       `;
   
@@ -334,6 +347,24 @@ export default function SettingsPage() {
     }
   };
  
+  const getTotalCount = () => {
+    switch (activeSection) {
+      case 'sites':
+        return sites.length;
+      case 'fournisseurs':
+        return params?.fournisseurs?.length || 0;
+      case 'articles':
+        return params?.articles?.length || 0;
+      case 'clients':
+        return params?.clients?.length || 0;
+      case 'produits':
+        return params?.produits?.length || 0;
+      default:
+        const types = params?.[activeSection as keyof typeof params] as TypeVariable[];
+        return types?.length || 0;
+    }
+  };
+
   const handleAddNew = () => {
     switch (activeSection) {
       case 'sites':
@@ -347,6 +378,9 @@ export default function SettingsPage() {
         break;
       case 'produits':
         setEditingProduit(null);
+        break;
+      case 'fournisseurs':
+        setEditingFournisseur(null);
         break;
       default:
         setEditingType(null);
@@ -368,6 +402,9 @@ export default function SettingsPage() {
         break;
       case 'produits':
         setEditingProduit(item as Produit);
+        break;
+      case 'fournisseurs':
+        setEditingFournisseur(item as Fournisseur);
         break;
       default:
         if ('libelle' in item && 'nom_variable' in item) {
@@ -406,6 +443,7 @@ export default function SettingsPage() {
                        activeSection === 'articles' ? 'article' : 
                        activeSection === 'clients' ? 'client' : 
                        activeSection === 'produits' ? 'produit' : 
+                       activeSection === 'fournisseurs' ? 'fournisseur' : 
                        isTypeVariable(itemToDelete) ? itemToDelete.nom_variable :
                        activeSection;
 
@@ -415,6 +453,7 @@ export default function SettingsPage() {
                      activeSection === 'sites' ? (itemToDelete as Site).id_site :
                      activeSection === 'articles' ? (itemToDelete as Article).id_article :
                      activeSection === 'produits' ? (itemToDelete as Produit).id_produit :
+                     activeSection === 'fournisseurs' ? (itemToDelete as Fournisseur).id_fournisseur :
                      (itemToDelete as TypeVariable).id_type;
   
       console.log('📊 Paramètres de suppression:', {
@@ -477,7 +516,10 @@ const DeleteConfirmationDialog = () => {
     ? itemToDelete.nom_client
     : 'nom_produit' in itemToDelete
     ? itemToDelete.nom_produit
-    : itemToDelete.libelle;
+    : 'nom_fournisseur' in itemToDelete
+    ? itemToDelete.nom_fournisseur
+    : itemToDelete.libelle
+    ;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -596,7 +638,45 @@ const handleSuccess = async () => {
             }
           }
           break;
-
+        case 'fournisseurs':
+          if (updatedParams.fournisseurs) {
+            console.log('🚛 Rafraîchissement des fournisseurs...');
+            
+            // Si itemToDelete est null, c'est une sauvegarde, pas une suppression
+            if (itemToDelete) {
+              updatedParams.fournisseurs = updatedParams.fournisseurs.filter(
+                f => f.id_fournisseur !== (itemToDelete as Fournisseur).id_fournisseur
+              );
+            }
+            
+            // Rafraîchir la liste des fournisseurs depuis l'API
+            try {
+              const query = `
+                SELECT * FROM fournisseur 
+                WHERE id_boul = ${user.bakeryId}
+                ORDER BY nom_fournisseur
+              `;
+              console.log('📤 Requête de rafraîchissement fournisseurs:', query);
+              
+              const response = await envoyerRequeteApi('boulangerie', query);
+              console.log('📥 Réponse du rafraîchissement fournisseurs:', response);
+              
+              if (Array.isArray(response)) {
+                updatedParams.fournisseurs = response.map(fournisseur => ({
+                  ...fournisseur,
+                  id_fournisseur: Number(fournisseur.id_fournisseur),
+                  id_boul: Number(fournisseur.id_boul)
+                }));
+                console.log('✨ Nouveaux fournisseurs chargés:', updatedParams.fournisseurs);
+              } else {
+                console.error('❌ La réponse n\'est pas un tableau:', response);
+              }
+            } catch (error) {
+              console.error('❌ Erreur lors du rafraîchissement des fournisseurs:', error);
+              throw error;
+            }
+          }
+          break;
         case 'produits':
           if (updatedParams.produits && itemToDelete) {
             updatedParams.produits = updatedParams.produits.filter(
@@ -730,7 +810,16 @@ const handleSuccess = async () => {
             onSuccess={handleSuccess}
           />
         );
-  
+        case 'fournisseurs':
+          return (
+            <AddEditFournisseur
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              fournisseur={editingFournisseur || undefined}
+              bakeryId={user?.bakeryId || 0}
+              onSuccess={handleSuccess}
+            />
+          );
       case 'clients':
         return (
           <AddEditClient
@@ -1032,7 +1121,45 @@ const handleSuccess = async () => {
             ))}
           </div>
         );
-      
+      case 'fournisseurs':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {params?.fournisseurs?.map((fournisseur) => (
+              <motion.div
+                key={fournisseur.id_fournisseur}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={commonCardStyle}
+              >
+                <div className={actionButtonsStyle}>
+                  <button
+                    onClick={() => handleEdit(fournisseur)}
+                    className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    title="Éditer"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(fournisseur)}
+                    className="p-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                    title="Supprimer"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>  
+
+                <h3 className={`${titleTextStyle} font-semibold text-lg mb-2`}>
+                  <Truck size={20} className="inline-block mr-2" />
+                  {fournisseur.nom_fournisseur}
+                </h3>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p>Téléphone: {fournisseur.tel_fournisseur}</p>
+                  <p>Adresse: {fournisseur.adresse}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )
       case 'articles':
         const filteredArticles = params?.articles?.filter(
           (article: Article) => selectedArticleType === 'all' || article.id_type === selectedArticleType
@@ -1265,7 +1392,10 @@ const handleSuccess = async () => {
       <div className="flex-1 p-8 bg-gray-50">
         <div className="flex justify-between items-center mb-6">
           <h1 className={`${titleTextStyle} text-2xl font-bold`}>
-            {menuItems.find(item => item.id === activeSection)?.label}
+            {menuItems.find(item => item.id === activeSection)?.label} 
+            <span className="text-gray-500 text-lg ml-2">
+              (Effectif : {getTotalCount()})
+            </span>
           </h1>
           <button
             onClick={handleAddNew}
