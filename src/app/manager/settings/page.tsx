@@ -73,7 +73,9 @@ interface Article {
   pu_boutique: number;
   pu_revente: number;
   nb_jour: number;
+  id_site: number;
 }
+
 interface Produit {
   id_produit: number;
   nom_produit: string;
@@ -509,7 +511,7 @@ const DeleteConfirmationDialog = () => {
 
 const handleSuccess = async () => {
   try {
-    console.log('🔄 Rafraîchissement des données après suppression...');
+    console.log('🔄 Rafraîchissement des données après opération...');
     
     if (!user?.bakeryId) {
       console.error('❌ ID boulangerie manquant');
@@ -535,22 +537,68 @@ const handleSuccess = async () => {
       switch (activeSection) {
         case 'articles':
           if (updatedParams.articles) {
-            updatedParams.articles = updatedParams.articles.filter(
-              a => a.id_article !== (itemToDelete as Article).id_article
-            );
+            // Si itemToDelete est null, c'est une sauvegarde, pas une suppression
+            if (itemToDelete) {
+              updatedParams.articles = updatedParams.articles.filter(
+                a => a.id_article !== (itemToDelete as Article).id_article
+              );
+            }
+            
+            // Rafraîchir la liste des articles depuis l'API
+            try {
+              const query = `
+                SELECT a.*, tv.libelle as nom_type 
+                FROM article a
+                LEFT JOIN type_variable tv ON tv.id_type = a.id_type
+                WHERE a.id_boul = ${user.bakeryId}
+                ORDER BY a.nom_article
+              `;
+              console.log('📤 Requête de rafraîchissement articles:', query);
+              
+              const response = await envoyerRequeteApi('boulangerie', query);
+              console.log('📥 Réponse du rafraîchissement articles:', response);
+              
+              if (Array.isArray(response)) {
+                updatedParams.articles = response.map(article => ({
+                  ...article,
+                  id_article: Number(article.id_article),
+                  id_type: Number(article.id_type),
+                  id_site: Number(article.id_site),
+                  pu_livreur: Number(article.pu_livreur),
+                  pu_boutique: Number(article.pu_boutique),
+                  pu_revente: Number(article.pu_revente),
+                  nb_jour: Number(article.nb_jour)
+                }));
+                console.log('✨ Nouveaux articles chargés:', updatedParams.articles);
+              } else {
+                console.error('❌ La réponse n\'est pas un tableau:', response);
+              }
+            } catch (error) {
+              console.error('❌ Erreur lors du rafraîchissement des articles:', error);
+              throw error;
+            }
           }
           break;
 
         case 'clients':
           if (updatedParams.clients) {
-            updatedParams.clients = updatedParams.clients.filter(
-              c => c.id_client !== (itemToDelete as Client).id_client
-            );
+            // Si itemToDelete est null, c'est une sauvegarde, pas une suppression
+            if (itemToDelete) {
+              updatedParams.clients = updatedParams.clients.filter(
+                c => c.id_client !== (itemToDelete as Client).id_client
+              );
+            }
+            // Rafraîchir la liste des clients depuis l'API
+            const query = `SELECT * FROM client WHERE id_site = ${user.id_site} ORDER BY nom_client`;
+            const response = await envoyerRequeteApi('boulangerie', query);
+            if (Array.isArray(response)) {
+              updatedParams.clients = response;
+            }
           }
           break;
 
         case 'produits':
-          if (updatedParams.produits) {
+          if (updatedParams.produits && itemToDelete) {
             updatedParams.produits = updatedParams.produits.filter(
               p => p.id_produit !== (itemToDelete as Produit).id_produit
             );
@@ -569,7 +617,7 @@ const handleSuccess = async () => {
             const paramKey = activeSection as keyof Pick<AppParams, 'typesCuisson' | 'typesUnite' | 'typesRecette' | 'typesProfil' | 'typesDepense' | 'typesVente' | 'typesClient' | 'les_unites'>;
             const currentParams = updatedParams[paramKey];
             
-            if (currentParams && Array.isArray(currentParams)) {
+            if (currentParams && Array.isArray(currentParams) && itemToDelete) {
               updatedParams[paramKey] = (currentParams as TypeVariable[]).filter(
                 t => t.id_type !== (itemToDelete as TypeVariable).id_type
               );
@@ -677,6 +725,7 @@ const handleSuccess = async () => {
             onClose={() => setIsModalOpen(false)}
             article={editingArticle || undefined}
             bakeryId={user?.bakeryId || 0}
+            sites={sites}
             typesVente={params?.typesCuisson || []}
             onSuccess={handleSuccess}
           />

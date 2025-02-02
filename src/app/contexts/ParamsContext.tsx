@@ -12,6 +12,7 @@ interface Article {
   pu_boutique: number;
   pu_revente: number;
   nb_jour: number;
+  id_site: number;
 }
 
 interface TypeVariable {

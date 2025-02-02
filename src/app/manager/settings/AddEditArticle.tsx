@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { envoyerRequeteApi, ApiError } from '@/app/apis/api';
 import { Package, Tag, DollarSign, Calendar } from 'lucide-react';
 
+
+interface Site {
+  id_site: number;
+  nom_site: string;
+}
 interface Article {
   id_article: number;
   nom_article: string;
@@ -13,6 +18,7 @@ interface Article {
   pu_boutique: number;
   pu_revente: number;
   nb_jour: number;
+  id_site: number;
 }
 
 interface TypeVente {
@@ -25,6 +31,7 @@ interface AddEditArticleProps {
   onClose: () => void;
   article?: Article;
   bakeryId: number;
+  sites: Site[];
   typesVente: TypeVente[];
   onSuccess: () => void;
 }
@@ -34,6 +41,7 @@ export default function AddEditArticle({
   onClose, 
   article, 
   bakeryId, 
+  sites,
   typesVente,
   onSuccess 
 }: AddEditArticleProps) {
@@ -43,7 +51,8 @@ export default function AddEditArticle({
     pu_livreur: 0,
     pu_boutique: 0,
     pu_revente: 0,
-    nb_jour: 1
+    nb_jour: 1,
+    id_site: sites[0]?.id_site || 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,8 +88,9 @@ export default function AddEditArticle({
         ${formData.pu_boutique},
         ${formData.pu_revente},
         ${formData.pu_livreur},
+         ${article?.id_article || 0},
         ${formData.nb_jour},
-        ${article?.id_article || 0}
+        ${formData.id_site}
       )`;
 
       console.log('📤 Envoi de la requête save_article...', query);
