@@ -1,19 +1,23 @@
-'use client';
+"use client";
 
-import { useState, useContext, useEffect, useCallback } from 'react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import {
-  Edit, Trash2, AlertTriangle, Package,
-  Calendar, Building2, User,
-  ChevronFirst, ChevronLast,
-  ChevronLeft, ChevronRight, Plus
-} from 'lucide-react';
-import { envoyerRequeteApi, ApiError } from '@/app/apis/api';
+import { useEffect, useState, useCallback, useContext } from 'react';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { useParams } from 'next/navigation';
+import { envoyerRequeteApi } from '@/app/apis/api';
+import { useApiCache } from '@/hooks/useApiCache';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import { UserContext } from '@/app/contexts/UserContext';
 import { ParamsContext } from '@/app/contexts/ParamsContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import AddCuissonModal from './AddCuissonModal';
+import AddEditProduction from './AddEditProduction';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  ChevronFirst, ChevronLast,
+  ChevronLeft, ChevronRight, Plus,
+  AlertTriangle, Calendar, Building2,
+  User, Edit, Trash2, Package
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -22,10 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
 import { DatePicker } from '@/components/ui/date-picker';
-import AddCuissonModal from './AddCuissonModal';
-import AddEditProduction from './AddEditProduction';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Pagination } from "@/components/ui/pagination";
 
 interface Cuisson {
   id_cuisson: number;
@@ -36,16 +40,11 @@ interface Cuisson {
   tot_produit: number;
 }
 
-interface DeleteCuissonResponse {
-  delete_cuisson: string;
-}
-
 interface ConfirmDeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   cuissonId: number;
-  uneCuisson: Cuisson;
   cuissonDate: string;
 }
 
@@ -80,155 +79,136 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, cuissonId, cuissonDate
 };
 
 export default function CuissonPage() {
-  const { user } = useContext(UserContext);
-  const { params } = useContext(ParamsContext);
   const { toast } = useToast();
-  const sites = params?.sites || [];
+  const params = useParams();
+  const bakeryId = params?.bakeryId ? parseInt(params.bakeryId as string) : null;
+  const { user } = useContext(UserContext);
+  const { params: siteParams } = useContext(ParamsContext);
   
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedCuisson, setSelectedCuisson] = useState<Cuisson | null>(null);
+  const [showProductionModal, setShowProductionModal] = useState(false);
   const [selectedSite, setSelectedSite] = useState<string>('');
   const [dateDebut, setDateDebut] = useState<Date | undefined>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1); // Premier jour du mois en cours
   });
   const [dateFin, setDateFin] = useState<Date | undefined>(new Date());
-  const [cuissons, setCuissons] = useState<Cuisson[]>([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditProductionModalOpen, setIsEditProductionModalOpen] = useState(false);
-  const [selectedCuisson, setSelectedCuisson] = useState<Cuisson | null>(null);
-  const [deleteCuisson, setDeleteCuisson] = useState<Cuisson | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Initialiser le site sélectionné en fonction du profil
-  useEffect(() => {
-    if (user) {
-      if (user.libelle_profil !== 'Manager' && user.id_site) {
-        setSelectedSite(user.id_site.toString());
-      }
-    }
-  }, [user]);
+  const pagination = useServerPagination<Cuisson>(10);
+  const { fetchData: fetchCuissons } = useApiCache<{ cuissons: Cuisson[], total: number }>('cuissons');
 
-  // Pagination
-  const itemsPerPage = 15;
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [displayedCuissons, setDisplayedCuissons] = useState<Cuisson[]>([]);
+  const loadCuissons = useCallback(async () => {
+    if (!bakeryId) return;
 
-  useEffect(() => {
-    // Calculer le nombre total de pages
-    const total = Math.ceil(cuissons.length / itemsPerPage);
-    setTotalPages(total || 1);
-    
-    // Filtrer les cuissons à afficher sur la page courante
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    setDisplayedCuissons(cuissons.slice(startIndex, endIndex));
-  }, [cuissons, currentPage]);
-
-  const fetchCuissons = useCallback(async () => {
-    if (!user?.bakeryId) return;
     setIsLoading(true);
     try {
-      const today = new Date();
-      const formattedToday = format(today, 'yyyy-MM-dd');
-
-      // Déterminer les dates à utiliser pour le filtrage
-      const effectiveDateDebut = dateDebut ? format(dateDebut, 'yyyy-MM-dd') : formattedToday;
-      const effectiveDateFin = dateFin ? format(dateFin, 'yyyy-MM-dd') : formattedToday;
-
       const query = `
+        WITH PaginatedCuissons AS (
+          SELECT 
+            id_cuisson, 
+            id_site, 
+            nom_site, 
+            date_cuisson, 
+            heure_cuisson,
+            COUNT(*) OVER() as total_count
+          FROM list_cuissons 
+          WHERE id_boul = ${bakeryId}
+          GROUP BY id_cuisson, id_site, nom_site, date_cuisson, heure_cuisson
+          ORDER BY date_cuisson DESC, heure_cuisson DESC
+          LIMIT ${pagination.limit} 
+          OFFSET ${pagination.offset}
+        )
         SELECT 
-          lc.id_cuisson, 
-          lc.date_cuisson, 
-          lc.id_site, 
-          lc.nom_site, 
-          lc.nom_agent, 
-          COUNT(id_production) AS tot_produit
-        FROM 
-          list_cuissons lc 
-        WHERE 
-          lc.id_boul = ${user.bakeryId}
-          ${selectedSite && selectedSite !== 'all' ? ` AND lc.id_site = ${selectedSite}` : ''}
-          AND lc.date_cuisson BETWEEN '${effectiveDateDebut}' AND '${effectiveDateFin}'
-        GROUP BY 
-          lc.id_cuisson, lc.date_cuisson, lc.id_site, lc.nom_site, lc.nom_agent
-        ORDER BY 
-          lc.id_cuisson DESC
+          id_cuisson, 
+          id_site, 
+          nom_site, 
+          date_cuisson, 
+          heure_cuisson,
+          total_count
+        FROM PaginatedCuissons
       `;
-      console.log('Envoi de la requête get cuissons...', query);
-      const response = await envoyerRequeteApi<Cuisson[]>('boulangerie', query);
-      console.log(' Réponse liste cuissons:', response);
-      setCuissons(response || []);
-      setCurrentPage(1);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les cuissons",
-          variant: "destructive",
-        });
+      
+      const response = await fetchCuissons(query);
+      if (response) {
+        pagination.setItems(response.cuissons);
+        pagination.setTotalItems(response.total);
       }
+    } catch (error) {
+      console.error('Erreur lors du chargement des cuissons:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les cuissons",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [user?.bakeryId, selectedSite, dateDebut, dateFin, toast]);
+  }, [bakeryId, pagination, fetchCuissons, toast]);
 
   useEffect(() => {
-    if (user?.bakeryId) {
-      fetchCuissons();
+    if (bakeryId) {
+      loadCuissons();
     }
-  }, [user, fetchCuissons]);
+  }, [bakeryId, loadCuissons]);
 
   const handleDelete = async (cuisson: Cuisson) => {
-    setDeleteCuisson(cuisson);
+    setSelectedCuisson(cuisson);
+    setShowDeleteDialog(true);
   };
 
   const confirmDelete = async () => {
-    if (!user?.bakeryId || !deleteCuisson) return;
+    if (!bakeryId || !selectedCuisson) return;
 
     try {
       const query = `
-        DELETE FROM cuisson 
-        WHERE id_cuisson = ${deleteCuisson.id_cuisson} 
-        AND id_boul = ${user.bakeryId}
+        DELETE FROM cuissons 
+        WHERE id_cuisson = ${selectedCuisson.id_cuisson} 
+        AND id_boul = ${bakeryId}
         RETURNING 'OK' as delete_cuisson
       `;
 
-      const response = await envoyerRequeteApi<DeleteCuissonResponse[]>('boulangerie', query);
-      if (response && response.length > 0 && response[0].delete_cuisson === 'OK') {
+      const response = await envoyerRequeteApi('boulangerie', query);
+      if (response) {
         toast({
           title: "Succès",
           description: "Cuisson supprimée avec succès",
         });
-        fetchCuissons();
+        setShowDeleteDialog(false);
+        setSelectedCuisson(null);
+        loadCuissons();
       }
     } catch (error) {
-      if (error instanceof ApiError) {
-        toast({
-          title: "Erreur",
-          description: "Impossible de supprimer la cuisson",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setDeleteCuisson(null);
+      console.error('Erreur lors de la suppression:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la cuisson",
+        variant: "destructive",
+      });
     }
   };
 
   const handleEditProductions = (cuisson: Cuisson) => {
     setSelectedCuisson(cuisson);
-    setIsEditProductionModalOpen(true);
+    setShowProductionModal(true);
   };
 
   // Fonctions de pagination
-  const goToFirstPage = () => setCurrentPage(1);
-  const goToPreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
-  const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
-  const goToLastPage = () => setCurrentPage(totalPages);
+  const goToFirstPage = () => pagination.goToFirstPage();
+  const goToPreviousPage = () => pagination.goToPreviousPage();
+  const goToNextPage = () => pagination.goToNextPage();
+  const goToLastPage = () => pagination.goToLastPage();
 
   // Formatage des dates pour l'affichage
   const formatDateForDisplay = (date: Date | undefined) => {
     if (!date) return '';
     return format(date, 'dd MMM yyyy', { locale: fr });
+  };
+
+  const handleSiteChange = (siteId: string) => {
+    setSelectedSite(siteId);
   };
 
   return (
@@ -298,7 +278,7 @@ export default function CuissonPage() {
                     </div>
                     <Select 
                       value={selectedSite} 
-                      onValueChange={setSelectedSite}
+                      onValueChange={handleSiteChange}
                       disabled={user?.libelle_profil  !== 'Manager'}
                     >
                       <SelectTrigger className="pl-10 border-0 focus:ring-0 focus:shadow-none">
@@ -306,7 +286,7 @@ export default function CuissonPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tous les sites</SelectItem>
-                        {sites.map((site) => (
+                        {siteParams?.sites?.map((site) => (
                           <SelectItem key={site.id_site} value={site.id_site.toString()}>
                             {site.nom_site}
                           </SelectItem>
@@ -319,7 +299,7 @@ export default function CuissonPage() {
               
               <div className="mt-4">
                 <Button 
-                  onClick={fetchCuissons} 
+                  onClick={loadCuissons} 
                   className="bg-gray-900 text-white hover:bg-gray-800 w-full md:w-auto"
                 >
                   Rechercher
@@ -328,39 +308,17 @@ export default function CuissonPage() {
             </div>
 
             {/* Progress Bar de chargement */}
-            {isLoading && (
-              <div className="w-full bg-gray-200 rounded-full h-2 my-2">
-                <div className="bg-blue-500 h-full rounded-full animate-pulse" style={{ width: '100%' }}></div>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(pagination.pageSize)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
               </div>
-            )}
-
-            {/* Barre de navigation de pagination */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow p-4 flex justify-between items-center">
-              <div className="text-sm font-medium text-red-500">
-                Affichage de {displayedCuissons.length} cuisson(s) sur {cuissons.length} - Page {currentPage} sur {totalPages}
-              </div>
-              <div className="flex space-x-2">
-                <Button variant="outline" className="text-red-500 border-red-200 hover:bg-red-50" size="icon" onClick={goToFirstPage} disabled={currentPage === 1}>
-                  <ChevronFirst className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" className="text-red-500 border-red-200 hover:bg-red-50" size="icon" onClick={goToPreviousPage} disabled={currentPage === 1}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" className="text-red-500 border-red-200 hover:bg-red-50" size="icon" onClick={goToNextPage} disabled={currentPage === totalPages}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" className="text-red-500 border-red-200 hover:bg-red-50" size="icon" onClick={goToLastPage} disabled={currentPage === totalPages}>
-                  <ChevronLast className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Liste des cuissons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {displayedCuissons.length > 0 ? (
-                displayedCuissons.map((cuisson) => (
-                  <Card key={cuisson.id_cuisson} className="bg-white border border-gray-200 hover:shadow-md transition-shadow duration-200">
-                    <CardContent className="p-4">
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {pagination.items.map((cuisson) => (
+                    <div key={cuisson.id_cuisson} className="bg-white p-4 rounded-lg shadow">
                       <div className="flex justify-between items-start">
                         <div className="space-y-3">
                           <p className="text-sm text-gray-500 font-semibold">
@@ -404,29 +362,34 @@ export default function CuissonPage() {
                           </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="col-span-3 text-center py-10 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-gray-500">Aucune cuisson trouvée. Veuillez modifier vos critères de recherche.</p>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  totalItems={pagination.totalItems}
+                  pageSize={pagination.pageSize}
+                  onPageChange={pagination.goToPage}
+                  className="mt-4"
+                />
+              </>
+            )}
             
             {/* Barre de navigation du bas */}
-            {totalPages > 1 && (
+            {pagination.totalPages > 1 && (
               <div className="flex justify-center space-x-2 mt-4">
-                <Button variant="outline" size="icon" onClick={goToFirstPage} disabled={currentPage === 1}>
+                <Button variant="outline" size="icon" onClick={goToFirstPage} disabled={pagination.currentPage === 1}>
                   <ChevronFirst className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" onClick={goToPreviousPage} disabled={currentPage === 1}>
+                <Button variant="outline" size="icon" onClick={goToPreviousPage} disabled={pagination.currentPage === 1}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" onClick={goToNextPage} disabled={currentPage === totalPages}>
+                <Button variant="outline" size="icon" onClick={goToNextPage} disabled={pagination.currentPage === pagination.totalPages}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" onClick={goToLastPage} disabled={currentPage === totalPages}>
+                <Button variant="outline" size="icon" onClick={goToLastPage} disabled={pagination.currentPage === pagination.totalPages}>
                   <ChevronLast className="h-4 w-4" />
                 </Button>
               </div>
@@ -447,7 +410,7 @@ export default function CuissonPage() {
 
       {/* Bouton Nouvelle cuisson flottant */}
       <Button 
-        onClick={() => setIsAddModalOpen(true)}
+        onClick={() => setShowAddModal(true)}
         className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg p-4 flex items-center gap-2"
       >
         <Plus className="h-5 w-5" />
@@ -456,36 +419,33 @@ export default function CuissonPage() {
 
       {/* Modal AddEditCuisson */}
       <AddCuissonModal
-        open={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={fetchCuissons}
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={loadCuissons}
         siteID={user?.id_site || 0}
       />
 
       {/* Modal AddEditProduction */}
-      {isEditProductionModalOpen && selectedCuisson && (
+      {selectedCuisson && showProductionModal && (
         <AddEditProduction
-          open={isEditProductionModalOpen}
+          open={showProductionModal}
           onClose={() => {
-            setIsEditProductionModalOpen(false);
+            setShowProductionModal(false);
             setSelectedCuisson(null);
           }}
-          onSuccess={fetchCuissons}
+          onSuccess={loadCuissons}
           cuissonId={selectedCuisson.id_cuisson}
-          uneCuisson={selectedCuisson} 
           bakeryId={user?.bakeryId || 0}
-          siteId={selectedCuisson.id_site}
         />
       )}
 
-      {deleteCuisson && (
+      {showDeleteDialog && (
         <ConfirmDeleteModal
-          isOpen={!!deleteCuisson}
-          onClose={() => setDeleteCuisson(null)}
+          isOpen={showDeleteDialog}
+          onClose={() => setShowDeleteDialog(false)}
           onConfirm={confirmDelete}
-          cuissonId={deleteCuisson.id_cuisson}
-          cuissonDate={deleteCuisson.date_cuisson}
-          uneCuisson={deleteCuisson}
+          cuissonId={selectedCuisson?.id_cuisson || 0}
+          cuissonDate={selectedCuisson?.date_cuisson || ''}
         />
       )}
     </div>
