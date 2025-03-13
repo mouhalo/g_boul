@@ -131,24 +131,13 @@ const AddEditProduction = ({
   const [editingProduction, setEditingProduction] = useState<Production | null>(null);
   const [deleteProduction, setDeleteProduction] = useState<Production | null>(null);
   
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filteredRecettes, setFilteredRecettes] = useState<Recette[]>([]);
+  const [, setSearchTerm] = useState("");
+  const filteredRecettes = recettes;
 
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredRecettes(recettes);
-    } else {
-      const filtered = recettes.filter(recette => 
-        recette.nom_recette.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredRecettes(filtered);
-    }
-  }, [searchTerm, recettes]);
-  // Chargement des détails de la cuisson et des productions existantes
-  useEffect(() => {
-    const fetchCuissonDetails = async () => {
-      if (!bakeryId || !cuissonId) return;
+    if (!bakeryId || !cuissonId) return;
 
+    const fetchData = async () => {
       setIsLoading(true);
       try {
         // Récupérer les détails de la cuisson si nécessaire
@@ -190,9 +179,7 @@ const AddEditProduction = ({
       }
     };
 
-    if (open) {
-      fetchCuissonDetails();
-    }
+    fetchData();
   }, [bakeryId, cuissonId, siteId, open, toast]);
 
   // Chargement des recettes disponibles

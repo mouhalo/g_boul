@@ -542,7 +542,6 @@ const AddEditProduction = ({
                 className="w-full px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
                 placeholder="Rechercher une recette..."
                 onChange={(e) => {
-                  const searchField = e.target.closest('.SelectContent')?.querySelector('input');
                   const items = e.target.closest('.SelectContent')?.querySelectorAll('.SelectItem');
                   const searchTerm = e.target.value.toLowerCase();
                   
