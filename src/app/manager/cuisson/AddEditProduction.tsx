@@ -523,64 +523,87 @@ const AddEditProduction = ({
               )}
               
               {(activeTab === 'formulaire' || productions.length === 0 || editingProduction || editMode) && (
-                <Card className="border-0 shadow-none">
-                  <CardContent className="p-0 space-y-4">
-                    {/* Choix de la recette */}
-                    <div className="space-y-2">
-                      <Label htmlFor="recette" className="text-sm font-medium text-gray-700">Recette</Label>
-                      <Select 
-                            value={selectedRecette} 
-                            onValueChange={handleRecetteChange}
-                            disabled={isLoading || (!!editingProduction)}
-                            >
-                        <SelectTrigger id="recette" className="w-full border border-gray-300 rounded-md">
-                          <SelectValue placeholder="Sélectionner une recette" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {recettes.map((recette) => (
-                            <SelectItem 
-                              key={recette.id_recette} 
-                              value={recette.id_recette.toString()}
-                            >
-                              {recette.nom_recette}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+  <Card className="border-0 shadow-none">
+    <CardContent className="p-0 space-y-4">
+      {/* Choix de la recette */}
+      <div className="space-y-2">
+        <Label htmlFor="recette" className="text-sm font-medium text-gray-700">Recette</Label>
+        <Select 
+              value={selectedRecette} 
+              onValueChange={handleRecetteChange}
+              disabled={isLoading || (!!editingProduction)}
+              >
+          <SelectTrigger id="recette" className="w-full border border-gray-300 rounded-md">
+            <SelectValue placeholder="Sélectionner une recette" />
+          </SelectTrigger>
+          <SelectContent className="max-h-60 overflow-y-auto">
+            <div className="relative">
+              <input
+                className="w-full px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
+                placeholder="Rechercher une recette..."
+                onChange={(e) => {
+                  const searchField = e.target.closest('.SelectContent')?.querySelector('input');
+                  const items = e.target.closest('.SelectContent')?.querySelectorAll('.SelectItem');
+                  const searchTerm = e.target.value.toLowerCase();
+                  
+                  items?.forEach((item) => {
+                    const text = item.textContent?.toLowerCase() || '';
+                    if (text.includes(searchTerm)) {
+                      item.classList.remove('hidden');
+                    } else {
+                      item.classList.add('hidden');
+                    }
+                  });
+                }}
+              />
+            </div>
+            <ScrollArea className="h-40 overflow-y-auto">
+              {recettes.map((recette) => (
+                <SelectItem 
+                  key={recette.id_recette} 
+                  value={recette.id_recette.toString()}
+                  className="py-2 px-3 hover:bg-blue-50 cursor-pointer transition-colors rounded-md"
+                >
+                  {recette.nom_recette}
+                </SelectItem>
+              ))}
+            </ScrollArea>
+          </SelectContent>
+        </Select>
+      </div>
 
-                    {/* Affichage de l'article */}
-                    {selectedArticle && (
-                      <div className="bg-blue-50 p-3 rounded-md flex items-center">
-                        <ShoppingBag className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-gray-500">Article produit</p>
-                          <p className="font-medium text-gray-800 truncate">{selectedArticle.name}</p>
-                        </div>
-                      </div>
-                    )}
+      {/* Affichage de l'article */}
+      {selectedArticle && (
+        <div className="bg-blue-50 p-3 rounded-md flex items-center">
+          <ShoppingBag className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-gray-500">Article produit</p>
+            <p className="font-medium text-gray-800 truncate">{selectedArticle.name}</p>
+          </div>
+        </div>
+      )}
 
-                    {/* Champ de quantité */}
-                    <div className="space-y-2">
-                      <Label htmlFor="quantity" className="text-sm font-medium text-gray-700">Quantité produite</Label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        min="0"
-                        value={quantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                        className="border border-gray-300 rounded-md w-full"
-                      />
-                      {quantity === 0 && (
-                        <div className="flex items-center text-amber-500 text-sm mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1 flex-shrink-0" />
-                          <span>Veuillez saisir une quantité supérieure à zéro</span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+      {/* Champ de quantité */}
+      <div className="space-y-2">
+        <Label htmlFor="quantity" className="text-sm font-medium text-gray-700">Quantité produite</Label>
+        <Input
+          id="quantity"
+          type="number"
+          min="0"
+          value={quantity}
+          onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+          className="border border-gray-300 rounded-md w-full"
+        />
+        {quantity === 0 && (
+          <div className="flex items-center text-amber-500 text-sm mt-1">
+            <AlertCircle className="h-4 w-4 mr-1 flex-shrink-0" />
+            <span>Veuillez saisir une quantité supérieure à zéro</span>
+          </div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+)}
             </div>
           </ScrollArea>
         </div>
