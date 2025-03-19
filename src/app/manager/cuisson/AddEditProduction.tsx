@@ -523,53 +523,53 @@ const AddEditProduction = ({
               )}
               
               {(activeTab === 'formulaire' || productions.length === 0 || editingProduction || editMode) && (
-  <Card className="border-0 shadow-none">
-    <CardContent className="p-0 space-y-4">
-      {/* Choix de la recette */}
-      <div className="space-y-2">
-        <Label htmlFor="recette" className="text-sm font-medium text-gray-700">Recette</Label>
-        <Select 
-              value={selectedRecette} 
-              onValueChange={handleRecetteChange}
-              disabled={isLoading || (!!editingProduction)}
-              >
-          <SelectTrigger id="recette" className="w-full border border-gray-300 rounded-md">
-            <SelectValue placeholder="Sélectionner une recette" />
-          </SelectTrigger>
-          <SelectContent className="max-h-60 overflow-y-auto">
-            <div className="relative">
-              <input
-                className="w-full px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
-                placeholder="Rechercher une recette..."
-                onChange={(e) => {
-                  const items = e.target.closest('.SelectContent')?.querySelectorAll('.SelectItem');
-                  const searchTerm = e.target.value.toLowerCase();
-                  
-                  items?.forEach((item) => {
-                    const text = item.textContent?.toLowerCase() || '';
-                    if (text.includes(searchTerm)) {
-                      item.classList.remove('hidden');
-                    } else {
-                      item.classList.add('hidden');
-                    }
-                  });
+                <Card className="border-0 shadow-none">
+                  <CardContent className="p-0 space-y-4">
+                    {/* Choix de la recette */}
+                    <div className="space-y-2">
+                      <Label htmlFor="recette" className="text-sm font-medium text-gray-700">Recette</Label>
+                      <Select 
+                        value={selectedRecette} 
+                        onValueChange={handleRecetteChange}
+                        disabled={isLoading || (!!editingProduction)}
+                      >
+                        <SelectTrigger id="recette" className="w-full border border-gray-300 rounded-md">
+                          <SelectValue placeholder="Sélectionner une recette" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto">
+                          <div className="relative">
+                            <input
+                              className="w-full px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
+                              placeholder="Rechercher une recette..."
+                              onChange={(e) => {
+                                const items = e.target.closest('.SelectContent')?.querySelectorAll('.SelectItem');
+                                const searchTerm = e.target.value.toLowerCase();
+                                
+                                items?.forEach((item) => {
+                                  const text = item.textContent?.toLowerCase() || '';
+                                  if (text.includes(searchTerm)) {
+                                    item.classList.remove('hidden');
+                                  } else {
+                                    item.classList.add('hidden');
+                                  }
+                                });
                 }}
               />
+                  </div>
+                  <ScrollArea className="h-40 overflow-y-auto">
+                    {recettes.map((recette) => (
+                      <SelectItem 
+                        key={recette.id_recette} 
+                        value={recette.id_recette.toString()}
+                        className="py-2 px-3 hover:bg-blue-50 cursor-pointer transition-colors rounded-md"
+                      >
+                        {recette.nom_recette}
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
+                </SelectContent>
+              </Select>
             </div>
-            <ScrollArea className="h-40 overflow-y-auto">
-              {recettes.map((recette) => (
-                <SelectItem 
-                  key={recette.id_recette} 
-                  value={recette.id_recette.toString()}
-                  className="py-2 px-3 hover:bg-blue-50 cursor-pointer transition-colors rounded-md"
-                >
-                  {recette.nom_recette}
-                </SelectItem>
-              ))}
-            </ScrollArea>
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Affichage de l'article */}
       {selectedArticle && (

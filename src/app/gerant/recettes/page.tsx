@@ -30,6 +30,7 @@ interface RecetteResponse {
   temps_cuisson: number;
   actif: boolean;
   nom_site: string;
+  tot_ingredients: number;
 }
 
 interface IngredientResponse {
@@ -140,7 +141,7 @@ export default function RecettesPage() {
     
     try {
       const query = `
-        SELECT  r.id_recette , r.id_boul , r.id_site , r.nom_site , r.nom_type ,r.id_article , r.nom_article , r.nom_recette ,r.qte_prod ,r.temps_cuisson 
+        SELECT  r.id_recette , r.id_boul , r.id_site , r.nom_site , r.nom_type ,r.id_article , r.nom_article , r.nom_recette ,r.qte_prod ,r.temps_cuisson, r.tot_ingredients 
         FROM list_recettes r
         WHERE r.id_boul = ${user.bakeryId}
         ORDER BY r.nom_recette ASC

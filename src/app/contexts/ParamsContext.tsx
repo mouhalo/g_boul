@@ -15,7 +15,7 @@ export interface Article {
   id_site: number;
 }
 
-interface TypeVariable {
+export interface TypeVariable {
   id_type: number;
   libelle: string;
   nom_variable: string;

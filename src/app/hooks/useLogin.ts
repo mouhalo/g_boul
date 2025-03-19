@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useContext } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useContext, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { envoyerRequeteApi, ApiError } from '../apis/api';
 import { UserContext, User } from '../contexts/UserContext';
 import { ParamsContext } from '../contexts/ParamsContext';
@@ -69,13 +69,22 @@ interface ConnexionAgentResponse {
 
 export default function useLogin() {
   const router = useRouter();
+  const pathname = usePathname();
   const { setUser } = useContext(UserContext);
   const { loadParams, params, setParams } = useContext(ParamsContext);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (pendingRedirect && pathname !== pendingRedirect) {
+      router.push(pendingRedirect);
+    } else if (pendingRedirect && pathname === pendingRedirect) {
+      setLoading(false);
+      setPendingRedirect(null);
+    }
+  }, [pathname, pendingRedirect, router]);
 
-  
   const handleLogin = async (formData: {
     code_boulangerie: string;
     login: string;
@@ -83,10 +92,12 @@ export default function useLogin() {
   }) => {
     setLoading(true);
     setError(null);
+    setPendingRedirect(null);
 
     try {
       if (!formData.code_boulangerie.trim()) {
         setError("Le code de la boulangerie est requis.");
+        setLoading(false);
         return;
       }
       const scode_unique = formData.code_boulangerie.trim().toUpperCase();
@@ -169,20 +180,24 @@ export default function useLogin() {
               'Caissier': '/caissier',
             };
             
-            router.push(profileRoutes[agent.libelle_profil] || '/dashboard');
+            const route = profileRoutes[agent.libelle_profil] || '/dashboard';
+            setPendingRedirect(route);
+            router.push(route);
           } else {
             setError('Aucun agent correspondant ou actif trouvé.');
+            setLoading(false);
           }
         } else {
           setError(connexion_agent.entete || 'Erreur inconnue.');
+          setLoading(false);
         }
       } else {
         setError('Erreur: Aucune réponse du serveur.');
+        setLoading(false);
       }
     } catch (err) {
       console.error('Erreur API:', err);
       setError(err instanceof ApiError ? err.message : 'Erreur de connexion au serveur.');
-    } finally {
       setLoading(false);
     }
   };
@@ -195,6 +210,6 @@ export default function useLogin() {
     error, 
     user, 
     params,
-    setParams // Export de setParams
+    setParams
   };
 }

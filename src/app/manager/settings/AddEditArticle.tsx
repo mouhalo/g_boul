@@ -85,28 +85,28 @@ export default function AddEditArticle({
         ${bakeryId},
         ${formData.id_type},
         '${formData.nom_article}',        
-        ${formData.pu_boutique},
-        ${formData.pu_revente},
-        ${formData.pu_livreur},
-         ${article?.id_article || 0},
-        ${formData.nb_jour},
-        ${formData.id_site}
+        ${formData.pu_boutique || 0},
+        ${formData.pu_revente || 0},
+        ${formData.pu_livreur || 0},
+        ${article?.id_article || 0},
+        ${formData.nb_jour || 1},
+        ${formData.id_site || sites[0]?.id_site || 0}
       )`;
 
-      console.log('📤 Envoi de la requête save_article...', query);
+      console.log(' Envoi de la requête save_article...', query);
       const response = await envoyerRequeteApi<SaveArticleResponse[]>('boulangerie', query);
-      console.log('📦 Réponse save_article:', response);
+      console.log(' Réponse save_article:', response);
 
       if (response && response.length > 0 && response[0].save_article === 'OK') {
-        console.log('✅ Article sauvegardé avec succès');
+        console.log(' Article sauvegardé avec succès');
         onSuccess();
         onClose();
       } else {
-        console.error('❌ Erreur lors de la sauvegarde de l\'article:', response);
+        console.error(' Erreur lors de la sauvegarde de l\'article:', response);
         throw new Error('La sauvegarde de l\'article a échoué');
       }
     } catch (error) {
-      console.error('❌ Erreur lors de la sauvegarde:', error);
+      console.error(' Erreur lors de la sauvegarde:', error);
       if (error instanceof ApiError) {
         setError(error.message);
       } else {

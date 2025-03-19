@@ -56,6 +56,7 @@ interface RecetteResponse {
   temps_cuisson: number;
   actif: boolean;
   nom_site: string;
+  tot_ingredients: number;
 }
 
 interface IngredientResponse {
