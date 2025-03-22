@@ -3,9 +3,11 @@
 import { useState, useContext, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { envoyerRequeteApi, ApiError } from '../apis/api';
-import { UserContext, User } from '../contexts/UserContext';
+import { UserContext } from '../contexts/UserContext';
 import { ParamsContext } from '../contexts/ParamsContext';
+import { User } from '../contexts/UserContext';
 import { Site } from '@/types/parameters';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Agent {
   id: number;
@@ -71,7 +73,8 @@ export default function useLogin() {
   const router = useRouter();
   const pathname = usePathname();
   const { setUser } = useContext(UserContext);
-  const { loadParams, params, setParams } = useContext(ParamsContext);
+  const { params, setParams, loadParams } = useContext(ParamsContext);
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
@@ -85,19 +88,22 @@ export default function useLogin() {
     }
   }, [pathname, pendingRedirect, router]);
 
-  const handleLogin = async (formData: {
-    code_boulangerie: string;
-    login: string;
-    password: string;
-  }) => {
+  const handleLogin = async (formData: { code_boulangerie: string; login: string; password: string }) => {
     setLoading(true);
     setError(null);
-    setPendingRedirect(null);
-
+    
     try {
-      if (!formData.code_boulangerie.trim()) {
-        setError("Le code de la boulangerie est requis.");
+      if (!formData.code_boulangerie || !formData.login || !formData.password) {
+        setError('Veuillez remplir tous les champs.');
         setLoading(false);
+        
+        // Afficher le toast pour les champs manquants
+        toast({
+          title: "Erreur de connexion",
+          description: 'Veuillez remplir tous les champs.',
+          variant: "destructive",
+        });
+        
         return;
       }
       const scode_unique = formData.code_boulangerie.trim().toUpperCase();
@@ -186,19 +192,49 @@ export default function useLogin() {
           } else {
             setError('Aucun agent correspondant ou actif trouvé.');
             setLoading(false);
+            
+            // Afficher le toast pour l'erreur d'agent
+            toast({
+              title: "Erreur de connexion",
+              description: 'Aucun agent correspondant ou actif trouvé.',
+              variant: "destructive",
+            });
           }
         } else {
-          setError(connexion_agent.entete || 'Erreur inconnue.');
+          const errorMessage = connexion_agent.entete || 'Erreur inconnue.';
+          setError(errorMessage);
           setLoading(false);
+          
+          // Afficher le toast pour l'erreur de connexion avec le message de l'API
+          toast({
+            title: "Erreur de connexion",
+            description: errorMessage,
+            variant: "destructive",
+          });
         }
       } else {
         setError('Erreur: Aucune réponse du serveur.');
         setLoading(false);
+        
+        // Afficher le toast pour l'erreur de serveur
+        toast({
+          title: "Erreur de connexion",
+          description: 'Erreur: Aucune réponse du serveur.',
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error('Erreur API:', err);
-      setError(err instanceof ApiError ? err.message : 'Erreur de connexion au serveur.');
+      const errorMessage = err instanceof ApiError ? err.message : 'Erreur de connexion au serveur.';
+      setError(errorMessage);
       setLoading(false);
+      
+      // Afficher le toast pour l'erreur d'API
+      toast({
+        title: "Erreur de connexion",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 

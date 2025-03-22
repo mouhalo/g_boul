@@ -724,33 +724,33 @@ const IngredientForm = ({
                   ))}
                 </SelectContent>
               </Select>
+              <div className="flex justify-center gap-4 mt-4 border border-red-500 rounded-md p-4">
+  <Button 
+    variant="outline" 
+    onClick={onCancel}
+    size="sm"
+    disabled={isSubmitting}
+    className="min-w-24"
+  >
+    Annuler
+  </Button>
+  <Button 
+    onClick={handleSaveIngredient} 
+    disabled={!isIngredientFormValid() || isSubmitting || isSaving}
+    size="sm"
+    className={`min-w-24 ${!isIngredientFormValid() ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
+  >
+    {isSubmitting || isSaving ? (
+      <div className="flex items-center justify-center gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Enregistrement...</span>
+      </div>
+    ) : (
+      ingredientToEdit ? "Modifier" : "Ajouter"
+    )}
+  </Button>
+</div>
             </div>
-             {/* Boutons d'action - fixés en bas */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex justify-end space-x-2 z-20">
-          <Button 
-            variant="outline" 
-            onClick={onCancel}
-            size="sm"
-            disabled={isSubmitting}
-          >
-            Annuler
-          </Button>
-          <Button 
-            onClick={handleSaveIngredient} 
-            disabled={!isIngredientFormValid() || isSubmitting || isSaving}
-            size="sm"
-            className={!isIngredientFormValid() ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}
-          >
-            {isSubmitting || isSaving ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Enregistrement...</span>
-              </div>
-            ) : (
-              ingredientToEdit ? "Modifier" : "Ajouter"
-            )}
-          </Button>
-        </div>
           </div>
         </div>
         

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { UserContext } from '@/app/contexts/UserContext';
-import { ParamsContext } from '@/app/contexts/ParamsContext';
+import { ParamsContext, TypeVariable } from '@/app/contexts/ParamsContext';
 import { Button } from '@/components/ui/button';
 import { 
   PlusCircle, 
@@ -13,7 +13,7 @@ import {
   AlertTriangle 
 } from 'lucide-react';
 
-import AddRecetteModal from './AddRecetteModal';
+import AddRecetteModal, { Unite } from './AddRecetteModal';
 import AddIngredientModal from './AddIngredientModal';
 import { useToast } from '@/components/ui/use-toast';
 import { envoyerRequeteApi, ApiError } from '@/app/apis/api';
@@ -136,12 +136,20 @@ export default function RecettesPage() {
   const { toast } = useToast();
   const inputTextStyle = "text-[#7e630c]";
 
+  // Convert TypeVariable[] to Unite[]
+  const mapToUnites = (types: TypeVariable[] | undefined): Unite[] => {
+    return (types || []).map(type => ({
+      id_unite: type.id_type,
+      nom_unite: type.libelle
+    }));
+  };
+
   const loadRecettes = useCallback(async () => {
     if (!user?.bakeryId) return;
     
     try {
       const query = `
-        SELECT  r.id_recette , r.id_boul , r.id_site , r.nom_site , r.nom_type ,r.id_article , r.nom_article , r.nom_recette ,r.qte_prod ,r.temps_cuisson, r.tot_ingredients 
+        SELECT  r.id_recette , r.id_boul , r.id_site , r.nom_site , r.nom_type ,r.id_article , r.nom_article , r.nom_recette ,r.qte_prod ,r.temps_cuisson , r.tot_ingredients
         FROM list_recettes r
         WHERE r.id_boul = ${user.bakeryId}
         ORDER BY r.nom_recette ASC
@@ -432,6 +440,8 @@ export default function RecettesPage() {
           }}
           articles={params?.articles || []}
           sites={params?.sites || []}
+          produits={params?.produits || []}
+          unites={mapToUnites(params?.unites)}
           bakeryId={user?.bakeryId || 0}
         />
       )}
@@ -446,6 +456,8 @@ export default function RecettesPage() {
           }}
           articles={params?.articles || []}
           sites={params?.sites || []}
+          produits={params?.produits || []}
+          unites={mapToUnites(params?.unites)}
           bakeryId={user?.bakeryId || 0}
           recetteToEdit={editRecette}
         />

@@ -49,6 +49,16 @@ export interface Client {
   adresse: string;
   actif: boolean;
 }
+
+export interface Agent {
+  id_agent: number;
+  nom_agent: string;
+  id_type_agent: number;
+  id_site: number;
+  id_profil: number;
+  libelle_profil: string;
+}
+
 export interface Fournisseur {
   id_fournisseur: number;
   nom_fournisseur: string;
@@ -58,6 +68,30 @@ export interface Fournisseur {
   email: string;
   actif: boolean;
 }
+
+export interface Vente {
+  id_vente: number;
+  id_site: number;
+  id_boul: number;
+  nom_site: string;
+  date_op: string;
+  id_article: number;
+  nom_article: string;
+  nom_type: string;
+  id_type: number;
+  qte: number;
+  pu: number;
+  total: number;
+  mt_encaisse: number;
+  reliquat: number;
+  id_detail: number;
+  id_agent: number;
+  nom_agent: string;
+  montant: number;
+  id_client: number;
+  nom_acteur: string;
+}
+
 export interface AppParams {
   typesCuisson?: TypeVariable[];
   typesUnite?: TypeVariable[];
@@ -72,6 +106,8 @@ export interface AppParams {
   sites?: Site[];
   unites?: TypeVariable[];
   fournisseurs?: Fournisseur[];
+  agents?: Agent[];
+  ventes?: Vente[];
 }
 
 
@@ -159,7 +195,9 @@ export function ParamsProvider({ children }: { children: React.ReactNode }) {
         typesDepense: data.les_types_depense || [],
         typesVente: data.les_types_vente || [],
         produits: data.les_produits || [],
-        typesClient: data.les_types_client || []
+        typesClient: data.les_types_client || [],
+        agents: data.les_agents || [],
+        ventes: data.list_ventes || []
       };
       
       console.log('💾 Mise à jour du contexte...');
