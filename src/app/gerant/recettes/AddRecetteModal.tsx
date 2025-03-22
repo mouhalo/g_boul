@@ -521,8 +521,6 @@ const IngredientForm = ({
   const [qteIngredient, setQteIngredient] = useState<string>('');
   const [selectedUnite, setSelectedUnite] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [editingProduction, setEditingProduction] = useState<boolean>(false);
 
   // Initialisation avec les valeurs de l'ingrédient à éditer, si présent
   useEffect(() => {
@@ -612,15 +610,21 @@ const IngredientForm = ({
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de l\'ingrédient:', error);
-      if (error instanceof ApiError) {
-        toast({
-          title: "Erreur",
-          description: ingredientToEdit 
-            ? "Impossible de modifier l'ingrédient" 
-            : "Impossible d'ajouter l'ingrédient",
-          variant: "destructive",
-        });
-      }
+      
+      // Vérifier si c'est l'erreur d'ingrédient déjà enregistré
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const isIngredientAlreadyExists = errorMessage.includes('Cet ingrédient est déjà enregistré');
+      
+      toast({
+        title: "Erreur",
+        description: isIngredientAlreadyExists 
+          ? "Cet ingrédient est déjà présent dans la recette" 
+          : (ingredientToEdit 
+              ? "Impossible de modifier l'ingrédient" 
+              : "Impossible d'ajouter l'ingrédient"),
+        variant: "destructive",
+      });
+      
       return false;
     } finally {
       setIsSubmitting(false);
@@ -644,7 +648,6 @@ const IngredientForm = ({
               <Select 
                 value={selectedProduit} 
                 onValueChange={setSelectedProduit}
-                disabled={isLoading || (!!editingProduction)}
               >
                 <SelectTrigger id="produit" className="w-full border border-gray-300 rounded-md">
                   <SelectValue placeholder="Sélectionner un produit" />
@@ -725,31 +728,31 @@ const IngredientForm = ({
                 </SelectContent>
               </Select>
               <div className="flex justify-center gap-4 mt-4 border border-red-500 rounded-md p-4">
-  <Button 
-    variant="outline" 
-    onClick={onCancel}
-    size="sm"
-    disabled={isSubmitting}
-    className="min-w-24"
-  >
-    Annuler
-  </Button>
-  <Button 
-    onClick={handleSaveIngredient} 
-    disabled={!isIngredientFormValid() || isSubmitting || isSaving}
-    size="sm"
-    className={`min-w-24 ${!isIngredientFormValid() ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
-  >
-    {isSubmitting || isSaving ? (
-      <div className="flex items-center justify-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Enregistrement...</span>
-      </div>
-    ) : (
-      ingredientToEdit ? "Modifier" : "Ajouter"
-    )}
-  </Button>
-</div>
+                <Button 
+                  variant="outline" 
+                  onClick={onCancel}
+                  size="sm"
+                  disabled={isSubmitting}
+                  className="min-w-24"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={handleSaveIngredient} 
+                  disabled={!isIngredientFormValid() || isSubmitting || isSaving}
+                  size="sm"
+                  className={`min-w-24 ${!isIngredientFormValid() ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
+                >
+                  {isSubmitting || isSaving ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Enregistrement...</span>
+                    </div>
+                  ) : (
+                    ingredientToEdit ? "Modifier" : "Ajouter"
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -778,7 +781,6 @@ const AddRecetteModal = ({
   
   // États généraux
   const [activeTab, setActiveTab] = useState<string>(TabType.RECETTE);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   
   // États pour les ingrédients
@@ -791,7 +793,6 @@ const AddRecetteModal = ({
   
   // Charger les ingrédients de la recette
   const fetchIngredients = useCallback(async (recetteId: number) => {
-    setIsLoading(true);
     try {
       const query = `
         SELECT * FROM list_ingredients 
@@ -810,8 +811,6 @@ const AddRecetteModal = ({
           variant: "destructive",
         });
       }
-    } finally {
-      setIsLoading(false);
     }
   }, [bakeryId, toast]);
   
@@ -935,7 +934,6 @@ const AddRecetteModal = ({
       return;
     }
 
-    setIsLoading(true);
     try {
       const query = `
         DELETE FROM ingredient 
@@ -966,8 +964,6 @@ const AddRecetteModal = ({
           variant: "destructive",
         });
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -1004,13 +1000,6 @@ const AddRecetteModal = ({
             {isEditMode && <p className="text-gray-500">ID: {recetteToEdit?.id_recette}</p>}
           </div>
         </div>
-        
-        {/* Progress Bar de chargement */}
-        {isLoading && (
-          <div className="w-full bg-gray-200 h-1">
-            <div className="bg-red-500 h-full rounded-full animate-pulse" style={{ width: '100%' }}></div>
-          </div>
-        )}
         
         {/* Tabs - seulement affichés en mode édition */}
         {isEditMode && (

@@ -8,7 +8,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { format } from 'date-fns';
 
 interface DeleteVenteDialogProps {
   isOpen: boolean;
