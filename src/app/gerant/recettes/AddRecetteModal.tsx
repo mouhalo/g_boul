@@ -440,7 +440,7 @@ const IngredientsList = ({
       {/* Zone défilante pour le tableau */}
       <div className="flex-1 overflow-hidden">
         {ingredients.length > 0 ? (
-          <div className="overflow-auto max-h-[calc(100vh-300px)]">
+          <div className="overflow-auto max-h-[calc(70vh-300px)]">
             <Table>
               <TableHeader className="sticky top-0 bg-white z-10">
                 <TableRow>
@@ -454,7 +454,7 @@ const IngredientsList = ({
                 {ingredients.map((ingredient) => (
                   <TableRow key={ingredient.id_ingredient} className="hover:bg-gray-50">
                     <TableCell className="font-medium text-gray-900">{ingredient.nom_produit}</TableCell>
-                    <TableCell className="text-right font-semibold">{ingredient.qte}</TableCell>
+                    <TableCell className="text-right font-semibold  text-gray-900">{ingredient.qte}</TableCell>
                     <TableCell className="text-gray-600">{ingredient.nom_unite}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -635,15 +635,15 @@ const IngredientForm = ({
     <Card className="border border-gray-200 shadow-sm flex flex-col h-full">
       <CardContent className="p-4 flex flex-col h-full">
         {/* En-tête fixe */}
-        <h3 className="text-lg font-medium text-gray-800 mb-4 bg-white z-10">
+        <h3 className="text-lg font-medium text-gray-800 mb-2 bg-white z-10">
           {ingredientToEdit ? "Modifier l'ingrédient" : "Ajouter un ingrédient"}
         </h3>
         
-        {/* Contenu défilant */}
-        <div className="flex-1 overflow-auto mb-[70px]">
-          <div className="space-y-6 p-1">
+        {/* Contenu avec hauteur réduite et sans margin-bottom */}
+        <div className="flex-1 overflow-auto max-h-[300px]">
+          <div className="space-y-4 p-1">
             {/* Produit */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="produit" className="text-sm font-medium text-gray-700">Produit</Label>
               <Select 
                 value={selectedProduit} 
@@ -652,7 +652,7 @@ const IngredientForm = ({
                 <SelectTrigger id="produit" className="w-full border border-gray-300 rounded-md">
                   <SelectValue placeholder="Sélectionner un produit" />
                 </SelectTrigger>
-                <SelectContent className="max-h-60 overflow-y-auto">
+                <SelectContent className="max-h-40 overflow-y-auto">
                   <div className="relative">
                     <input
                       className="w-full px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
@@ -687,7 +687,7 @@ const IngredientForm = ({
               </Select>
             </div>
             {/* Quantité */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="quantite" className="text-sm font-medium text-gray-700">Quantité</Label>
               <Input
                 id="quantite"
@@ -707,7 +707,7 @@ const IngredientForm = ({
             </div>
             
             {/* Unité */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="unite" className="text-sm font-medium text-gray-700">Unité</Label>
               <Select 
                 value={selectedUnite} 
@@ -727,37 +727,39 @@ const IngredientForm = ({
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex justify-center gap-4 mt-4 border border-red-500 rounded-md p-4">
-                <Button 
-                  variant="outline" 
-                  onClick={onCancel}
-                  size="sm"
-                  disabled={isSubmitting}
-                  className="min-w-24"
-                >
-                  Annuler
-                </Button>
-                <Button 
-                  onClick={handleSaveIngredient} 
-                  disabled={!isIngredientFormValid() || isSubmitting || isSaving}
-                  size="sm"
-                  className={`min-w-24 ${!isIngredientFormValid() ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
-                >
-                  {isSubmitting || isSaving ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Enregistrement...</span>
-                    </div>
-                  ) : (
-                    ingredientToEdit ? "Modifier" : "Ajouter"
-                  )}
-                </Button>
-              </div>
             </div>
           </div>
         </div>
         
-       
+        {/* Boutons fixés en bas - maintenant dans leur propre div en dehors du défilement */}
+        <div className="mt-4 pt-2 border-t border-gray-200">
+          <div className="flex justify-center gap-4 mt-2">
+            <Button 
+              variant="outline" 
+              onClick={onCancel}
+              size="sm"
+              disabled={isSubmitting}
+              className="min-w-24"
+            >
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleSaveIngredient} 
+              disabled={!isIngredientFormValid() || isSubmitting || isSaving}
+              size="sm"
+              className={`min-w-24 ${!isIngredientFormValid() ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
+            >
+              {isSubmitting || isSaving ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Enregistrement...</span>
+                </div>
+              ) : (
+                ingredientToEdit ? "Modifier" : "Ajouter"
+              )}
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1072,14 +1074,7 @@ const AddRecetteModal = ({
             Fermer
           </Button>
           
-          {activeTab === TabType.INGREDIENTS_LIST && (
-            <Button
-              onClick={handleAddIngredient}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Ajouter un ingrédient
-            </Button>
-          )}
+         
         </div>
       </div>
       

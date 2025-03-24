@@ -476,7 +476,7 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
         {venteDetails.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full border text-sm">
-              <thead className="bg-gray-100 font-normal bg-red-500 text-white">
+              <thead className=" font-normal bg-red-500 text-white">
                 <tr>
                   <th className="p-2 border">Article</th>
                   <th className="p-2 border">Client</th>
@@ -537,7 +537,7 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
           <Dialog open={showConfirmation} onOpenChange={handleCancelSave}>
             <DialogContent>
               <DialogTitle>Confirmation de sauvegarde</DialogTitle>
-              <p>Êtes-vous sûr de vouloir sauvegarder la vente ?</p>
+              <p >Êtes-vous sûr de vouloir sauvegarder la vente ?</p>
               <div className="flex justify-end">
                 <Button variant="outline" onClick={handleCancelSave}>
                   Annuler
