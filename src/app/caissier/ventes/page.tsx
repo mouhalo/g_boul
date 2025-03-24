@@ -65,6 +65,8 @@ interface DeleteVenteDialogProps {
 }
 
 // Composant pour la confirmation de suppression
+//Vérifier la suppression de la vente
+
 const DeleteVenteDialog: React.FC<DeleteVenteDialogProps> = ({
   isOpen,
   onClose,
@@ -346,6 +348,7 @@ export default function GestionVentesPage() {
         });
       }
     });
+    // Tri des tableauxpar ordre alphabétique
     typesArray.sort((a, b) => {
       // Vérification que a.libelle et b.libelle ne sont pas null ou undefined
       const libelleA = a.libelle || '';

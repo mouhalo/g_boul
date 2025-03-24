@@ -1,0 +1,80 @@
+/etc/apache2/sites-available/gereboul-ssl.conf
+
+ nano /etc/nginx/sites-available/g_boul
+ 
+nano /etc/apache2/sites-available/gereboul.conf
+
+<VirtualHost *:80>
+    ServerName gereboul.net
+    ServerAlias www.gereboul.net
+
+    # Logs
+    ErrorLog ${APACHE_LOG_DIR}/gereboul-error.log
+    CustomLog ${APACHE_LOG_DIR}/gereboul-access.log combined
+
+    # Proxy vers Next.js
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyPass / http://localhost:3000/
+    ProxyPassReverse / http://localhost:3000/
+
+    # WebSockets pour Next.js
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteRule /(.*) ws://localhost:3001/$1 [P,L]
+</VirtualHost>
+
+
+new:ssl:
+<VirtualHost *:80>
+    ServerName gereboul.net
+    ServerAlias www.gereboul.net
+    # Rediriger vers HTTPS
+    RewriteEngine On
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName gereboul.net
+    ServerAlias www.gereboul.net
+    
+    # SSL Configuration
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/gereboul/certificat.crt
+    SSLCertificateKeyFile /etc/ssl/gereboul/cle_privee.key
+    # Si vous avez un fichier CA Bundle:
+    SSLCertificateChainFile /etc/ssl/gereboul/ca_bundle.crt
+    
+    # Logs
+    ErrorLog ${APACHE_LOG_DIR}/gereboul-error.log
+    CustomLog ${APACHE_LOG_DIR}/gereboul-access.log combined
+    
+    # Proxy vers Next.js
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyPass / http://localhost:3000/
+    ProxyPassReverse / http://localhost:3000/
+    
+    # WebSockets pour Next.js
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteRule /(.*) ws://localhost:3001/$1 [P,L]
+</VirtualHost>
+
+
+-------------------------GNINX-----------------------------
+  GNU nano 4.8                                            /etc/nginx/sites-available/g_boul
+server {
+    listen 80;
+    server_name gereboul.net www.gereboul.net;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
