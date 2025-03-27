@@ -19,7 +19,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     console.log('=== Manager Layout User Check ===');
-    console.log('User:', user ? JSON.stringify(user, null, 2) : 'Not logged in');
+    //console.log('User:', user ? JSON.stringify(user, null, 2) : 'Not logged in');
     console.log('Profile:', user?.libelle_profil);
 
     if (!user || user.libelle_profil !== "Manager") {

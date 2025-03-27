@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useContext } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { useParams } from 'next/navigation';
+//import { useParams } from 'next/navigation';
 import { envoyerRequeteApi } from '@/app/apis/api';
 import { useServerPagination } from '@/hooks/useServerPagination';
 import { UserContext } from '@/app/contexts/UserContext';
@@ -11,9 +11,11 @@ import { ParamsContext, TypeVariable, Site, Article, Agent } from '@/app/context
 import { Skeleton } from '@/components/ui/skeleton';
 import AddVenteModal from '@/app/manager/ventes/AddVenteModal';
 import VisuelVenteModal from '@/app/manager/ventes/VisuelVenteModal';
-import { Plus, Calendar, Store, ShoppingBag, CreditCard, User } from 'lucide-react';
+
+import { Plus, Calendar, Store, ShoppingBag, CreditCard, User,Trash2,Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
 import { CustomPagination } from '@/app/components/CustomPagination';
 import {
   Dialog,
@@ -64,6 +66,8 @@ interface DeleteVenteDialogProps {
   venteDate: string;
 }
 
+
+
 // Composant pour la confirmation de suppression
 const DeleteVenteDialog: React.FC<DeleteVenteDialogProps> = ({
   isOpen,
@@ -73,11 +77,39 @@ const DeleteVenteDialog: React.FC<DeleteVenteDialogProps> = ({
   venteDate,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   const handleConfirm = async () => {
     setIsDeleting(true);
-    await onConfirm();
-    setIsDeleting(false);
+    try {
+      const query = `delete from vente where id_vente = ${venteId} returning 'OK' as delete_vente`;
+      const response = await envoyerRequeteApi<{delete_vente: string}[]>('boulangerie', query);
+      
+      if (response && response.length > 0 && response[0].delete_vente === 'OK') {
+        toast({
+          title: "Succès",
+          description: "Vente supprimée avec succès",
+        });
+        // Appeler onConfirm pour mettre à jour la liste des ventes dans le composant parent
+        onConfirm();
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Échec de la suppression de la vente",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      onClose();
+    }
   };
 
   return (
@@ -85,7 +117,7 @@ const DeleteVenteDialog: React.FC<DeleteVenteDialogProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle style={{ color: "#A52A2A" }}>Confirmer la suppression</DialogTitle>
-          <DialogDescription style={{ color: "#000" }}>
+          <DialogDescription style={{ color: "#fff" }}>
             Êtes-vous sûr de vouloir supprimer la vente #{venteId} du {venteDate} ? Cette action est irréversible.
           </DialogDescription>
         </DialogHeader>
@@ -94,7 +126,14 @@ const DeleteVenteDialog: React.FC<DeleteVenteDialogProps> = ({
             Annuler
           </Button>
           <Button variant="destructive" onClick={handleConfirm} disabled={isDeleting}>
-            {isDeleting ? "Suppression..." : "Supprimer"}
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Suppression...
+              </>
+            ) : (
+              "Supprimer"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -104,8 +143,8 @@ const DeleteVenteDialog: React.FC<DeleteVenteDialogProps> = ({
 
 export default function GestionVentesPage() {
   const { toast } = useToast();
-  const params = useParams();
-  const bakeryId = params?.bakeryId ? parseInt(params.bakeryId as string) : null;
+  //const params = useParams();
+  //const bakeryId = params?.bakeryId ? parseInt(params.bakeryId as string) : null;
   const { user } = useContext(UserContext);
   const { params: siteParams } = useContext(ParamsContext);
 
@@ -296,6 +335,12 @@ export default function GestionVentesPage() {
     }
   }, [selectedSite, selectedType, selectedArticle, selectedAgent, dateDebut, dateFin, pagination, toast]);
 
+  // Fonction pour gérer la suppression et l'actualisation
+const handleDeleteVente = () => {
+  // Cette fonction sera appelée par le DeleteVenteDialog après une suppression réussie
+  loadVentes(); // Recharger la liste des ventes
+};
+
   const loadFilterOptions = (data: {
     id_type: number;
     nom_type: string;
@@ -371,17 +416,22 @@ export default function GestionVentesPage() {
   };
 
   // Chargement initial au montage de la page
-  useEffect(() => {
-    if (bakeryId) {
-      const now = new Date();
-      setDateDebut(new Date(now.getFullYear(), now.getMonth(), 1));
-      setDateFin(new Date());
-      const timer = setTimeout(() => {
-        loadVentes();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [bakeryId, loadVentes, user]);
+useEffect(() => {
+  console.log("Effet de chargement initial - user:", user);
+  
+  // Initialiser les dates dans tous les cas
+  const now = new Date();
+  setDateDebut(new Date(now.getFullYear(), now.getMonth(), 1));
+  setDateFin(new Date());
+  
+  // Lancer le chargement des ventes 
+  const timer = setTimeout(() => {
+    console.log("Exécution forcée de loadVentes()");
+    loadVentes();
+  }, 100);
+  
+  return () => clearTimeout(timer);
+}, [loadVentes, user]);
 
   // Fonction déclenchée par le bouton "Appliquer"
   const applyFilters = () => {
@@ -410,6 +460,10 @@ export default function GestionVentesPage() {
     return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
   };
 
+  const handleDeleteClick = (vente: Vente) => {
+    setSelectedVente(vente);
+    setShowDeleteDialog(true);
+  };
   // 3. Fonction handleViewDetails pour voir les détails d'une vente
   const handleViewDetails = (vente: Vente) => {
     setSelectedVente(vente);
@@ -464,7 +518,7 @@ export default function GestionVentesPage() {
               }}
               className="block w-full p-2 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-red-500 focus:border-red-500"
             >
-              <option value="">Tous les sites</option>
+              <option value="">Tous mes sites</option>
               {siteParams?.sites?.map((site: Site) => (
                 <option key={site.id_site} value={site.id_site.toString()}>
                   {site.nom_site}
@@ -589,22 +643,36 @@ export default function GestionVentesPage() {
             {(pagination.items as Vente[]).map((vente) => (
               <Card key={vente.id_vente} className="shadow-md hover:shadow-lg transition-shadow duration-200">
                 <CardHeader className="pb-2" style={{ backgroundColor: "#ffe5e5" }}>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg flex items-center" style={{ color: "#A52A2A" }}>
-                      Vente #{vente.id_vente}
-                    </CardTitle>
-                    <Badge 
-                      className="bg-amber-500 hover:bg-amber-600 transition-colors cursor-pointer"
-                      onClick={() => handleViewDetails(vente)}
-                    >
-                      {vente.details.length} article(s)
-                    </Badge>
-                  </div>
-                  <div className="flex items-center text-gray-600 text-sm mt-1">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    {formatDate(vente.date_op)}
-                  </div>
-                </CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg flex items-center" style={{ color: "#A52A2A" }}>
+                        Vente #{vente.id_vente}
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        {user?.libelle_profil === "Manager" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(vente);
+                            }}
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            title="Supprimer la vente"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        )}
+                        <Badge 
+                          className="bg-amber-500 hover:bg-amber-600 transition-colors cursor-pointer"
+                          onClick={() => handleViewDetails(vente)}
+                        >
+                          {vente.details.length} article(s)
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center text-gray-600 text-sm mt-1">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      {formatDate(vente.date_op)}
+                    </div>
+                  </CardHeader>
                 <CardContent className="pt-3 pb-2">
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
@@ -713,12 +781,12 @@ export default function GestionVentesPage() {
       {/* Modal de confirmation de suppression */}
       {showDeleteDialog && selectedVente && (
         <DeleteVenteDialog
-          isOpen={showDeleteDialog}
-          onClose={() => setShowDeleteDialog(false)}
-          onConfirm={() => {}}
-          venteId={selectedVente.id_vente}
-          venteDate={format(new Date(selectedVente.date_op), 'dd/MM/yyyy')}
-        />
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteVente}
+        venteId={selectedVente.id_vente}
+        venteDate={format(new Date(selectedVente.date_op), 'dd/MM/yyyy')}
+      />
       )}
     </div>
   );

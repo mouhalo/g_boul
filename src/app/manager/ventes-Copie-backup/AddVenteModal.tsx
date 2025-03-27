@@ -9,7 +9,7 @@ import { ParamsContext } from '@/app/contexts/ParamsContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 
-import ArticleVenteModal, { ArticlePossible, ArticleVenteDetail, PrixOption } from '@/components/ventes/ArticleVenteModal';
+import ArticleVenteModal, { ArticlePossible, ArticleVenteDetail, PrixOption } from '@/components/ventes0/ArticleVenteModal';
 import { SelectList } from '@/components/ui/select-list';
 
 // Props pour le modal
@@ -54,7 +54,6 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
-  const [encaissementManuel, setEncaissementManuel] = useState<boolean>(false);
 
   // 2) États pour le petit « sous-formulaire » de saisie
   const [showArticleModal, setShowArticleModal] = useState<boolean>(false);
@@ -74,22 +73,12 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
       case 1: pu = articleToSell.pu_boutique; break;
       case 2: pu = articleToSell.pu_livreur;  break;
       case 3: pu = articleToSell.pu_revente;  break;
-      case 4: pu = newPuLibre;                break; // prix libre
+      case 4: pu = newPuLibre;               break; // prix libre
     }
     const total = (newQte * pu);
     setTotalLigne(total);
-    
-    // Mettre à jour mtEncaisse seulement si l'utilisateur n'a pas modifié manuellement
-    if (!encaissementManuel) {
-      setMtEncaisse(total);
-    }
-  }, [articleToSell, encaissementManuel]);
-
-  const handleMtEncaisseChange = (value: number) => {
-    setMtEncaisse(value);
-    setEncaissementManuel(true);
-  };
-
+    setMtEncaisse(total); // par défaut
+  }, [articleToSell]);
 
   // 6) Effet pour recalculer quand qte ou prixOption changent
   useEffect(() => {
@@ -216,8 +205,8 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
     setPuLibre(0);
     setMtEncaisse(0);
     setTotalLigne(0);
-    setEncaissementManuel(false); // Réinitialiser l'état
     setShowArticleModal(true);
+  //  setIsArticleDropdownOpen(false); // Fermer la liste déroulante après sélection
   };
 
   // 7) Valider l'article sélectionné et l'ajouter au tableau
@@ -538,7 +527,7 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
             mtEncaisse={mtEncaisse}
             totalLigne={totalLigne}
             onValiderArticle={handleAjouterArticle}
-            onMtEncaisseChange={handleMtEncaisseChange}
+            onMtEncaisseChange={(value) => setMtEncaisse(value)}
             onClose={() => {
               setShowArticleModal(false);
               setArticleToSell(null);

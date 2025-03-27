@@ -1,0 +1,3 @@
+@echo off
+echo Démarrage de Next.js en mode turbo avec Fast Refresh amélioré...
+npx next dev --turbo

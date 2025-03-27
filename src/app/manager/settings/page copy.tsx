@@ -118,7 +118,7 @@ interface Agent {
   libelle_profil: string;
   tel_agent?: string;
   login_agent?: string;
-  agent_actif?: boolean;
+  actif?: boolean;
 }
 
 interface TypeVariable {
@@ -161,49 +161,7 @@ export default function SettingsPage() {
   const [selectedClientType, setSelectedClientType] = useState<number | 'all'>('all');
   const [selectedProduitUnite, setSelectedProduitUnite] = useState<number | 'all'>('all');
   const [selectedAgentProfil, setSelectedAgentProfil] = useState<number | 'all'>('all');
-  
-  // État pour la valeur saisie par l'utilisateur (mise à jour immédiatement)
-  const [searchInputValue, setSearchInputValue] = useState<string>('');
-  // État "debounced" pour le filtrage effectif (mise à jour après un délai)
   const [searchText, setSearchText] = useState<string>('');
-  
-  // Référence pour le timer de debounce
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Fonction pour appliquer le debouncing à la recherche
-  const handleSearchInputChange = useCallback((value: string) => {
-    // Mettre à jour immédiatement la valeur affichée
-    setSearchInputValue(value);
-    
-    // Annuler le timer précédent s'il existe
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    // Créer un nouveau timer pour mettre à jour la valeur de recherche après un délai
-    debounceTimerRef.current = setTimeout(() => {
-      setSearchText(value);
-    }, 300); // Délai de 300ms
-  }, []);
-  
-  // Nettoyage du timer lors du démontage du composant
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-  
-  // Réinitialiser tous les filtres lors du changement de section
-  useEffect(() => {
-    setSearchInputValue('');
-    setSearchText('');
-    setSelectedArticleType('all');
-    setSelectedClientType('all');
-    setSelectedProduitUnite('all');
-    setSelectedAgentProfil('all');
-  }, [activeSection]);
   
   // États pour les modaux
   const [editingType, setEditingType] = useState<TypeVariable | null>(null);
@@ -820,7 +778,7 @@ const handleSuccess = async () => {
               const query = `
                 SELECT *
                 FROM list_agents
-                WHERE id_boul = ${user.bakeryId} and agent_actif = true
+                WHERE id_site = ${user.id_site} 
                 ORDER BY nom_agent
               `;
               
@@ -851,8 +809,8 @@ const handleSuccess = async () => {
                     nom_site: agent.nom_site || '',
                     libelle_profil: agent.libelle_profil || '',
                     tel_agent: agent.tel_agent || '',
-                    login_agent: agent.login_agent ,
-                    agent_actif: agent.agent_actif 
+                    login_agent: agent.login_agent || '',
+                    actif: agent.agent_actif === true || agent.agent_actif === 'true' || agent.agent_actif === 1 || agent.agent_actif === '1'
                   };
                   console.log(`📥 Agent traité: ${processedAgent.nom_agent}`, processedAgent);
                   return processedAgent;
@@ -952,17 +910,11 @@ const renderFilterSelect = (
 };
 
 // Composant pour la recherche textuelle
-const SearchInput = ({ onSearch, placeholder, value }: {
+const SearchInput = ({ onSearch, placeholder }: {
   onSearch: (value: string) => void;
   placeholder: string;
-  value: string;
 }) => {
-  // Synchroniser l'état interne avec la valeur fournie par le parent
-  useEffect(() => {
-    setInputValue(value);
-  }, [value]);
-  
-  const [inputValue, setInputValue] = useState<string>(value);
+  const [inputValue, setInputValue] = useState<string>('');
   
   // Utilisation de useRef pour stocker la référence au timer de debounce
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -1272,9 +1224,8 @@ const SearchInput = ({ onSearch, placeholder, value }: {
         return (
           <>
             <SearchInput
-              onSearch={(value) => handleSearchInputChange(value)}
+              onSearch={(value) => setSearchText(value)}
               placeholder="Rechercher un fournisseur"
-              value={searchInputValue}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredFournisseurs.map((fournisseur) => (
@@ -1340,9 +1291,8 @@ const SearchInput = ({ onSearch, placeholder, value }: {
               "type d'article"
             )}
             <SearchInput
-              onSearch={(value) => handleSearchInputChange(value)}
+              onSearch={(value) => setSearchText(value)}
               placeholder="Rechercher un article"
-              value={searchInputValue}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredArticles.map((article: Article) => (
@@ -1411,9 +1361,8 @@ const SearchInput = ({ onSearch, placeholder, value }: {
               'type de client'
             )}
             <SearchInput
-              onSearch={(value) => handleSearchInputChange(value)}
+              onSearch={(value) => setSearchText(value)}
               placeholder="Rechercher un client"
-              value={searchInputValue}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredClients.map((client) => (
@@ -1501,9 +1450,8 @@ const SearchInput = ({ onSearch, placeholder, value }: {
               'profil'
             )}
             <SearchInput
-              onSearch={(value) => handleSearchInputChange(value)}
+              onSearch={(value) => setSearchText(value)}
               placeholder="Rechercher un agent"
-              value={searchInputValue}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAgents.map((agent) => (
@@ -1578,9 +1526,8 @@ const SearchInput = ({ onSearch, placeholder, value }: {
             )}
             
             <SearchInput
-              onSearch={(value) => handleSearchInputChange(value)}
+              onSearch={(value) => setSearchText(value)}
               placeholder="Rechercher un produit"
-              value={searchInputValue}
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

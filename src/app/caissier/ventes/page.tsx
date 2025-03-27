@@ -344,7 +344,8 @@ export default function GestionVentesPage() {
           id_type_agent: 0,
           id_site: 0,
           id_profil: 0,
-          libelle_profil: ''
+          libelle_profil: '',
+          nom_site: '' // Ajout de la propriété nom_site requise
         });
       }
     });

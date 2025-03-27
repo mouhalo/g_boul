@@ -56,7 +56,11 @@ export interface Agent {
   id_type_agent: number;
   id_site: number;
   id_profil: number;
+  nom_site: string;
   libelle_profil: string;
+  tel_agent?: string;
+  login_agent?: string;
+  agent_actif?: boolean;
 }
 
 export interface Fournisseur {
@@ -165,10 +169,15 @@ export function ParamsProvider({ children }: { children: React.ReactNode }) {
       const data = response[0].get_all_params;
       console.log('📊 Données brutes:', data);
       console.log('📊 Les unités brutes:', data.unites);
+      console.log('📊 Les agents bruts:', data.les_agents);
+      console.log('📊 Type de data.les_agents:', data.les_agents ? typeof data.les_agents : 'undefined');
+      console.log('📊 Est-ce que data.les_agents est un tableau?', Array.isArray(data.les_agents));
+      console.log('📊 Longueur de data.les_agents:', data.les_agents?.length || 0);
       console.log('📊 Données par type:');
       console.log('- Articles:', data.les_articles?.length ?? 0);
       console.log('- Produits:', data.les_produits?.length ?? 0);
       console.log('- Clients:', data.les_clients?.length ?? 0);
+      console.log('- Agents:', data.les_agents?.length ?? 0);
       console.log('- Unités:', data.unites?.length ?? 0);
       console.log('- Sites:', data.les_sites?.length ?? 0);
       console.log('- Types:', {
@@ -182,22 +191,26 @@ export function ParamsProvider({ children }: { children: React.ReactNode }) {
         fournisseur: data.les_fournisseurs?.length ?? 0
       });
 
+   
+      const paramsData = response[0].get_all_params;
+      console.log('📦 Paramètres extraits:', paramsData);
+      
       const paramsToSet = {
-        articles: data.les_articles || [],
-        clients: data.les_clients || [],
-        fournisseurs: data.les_fournisseurs || [],
-        unites: data.unites || [],
-        sites: data.les_sites || [],
-        typesCuisson: data.les_types_cuisson || [],
-        typesUnite: data.unites || [],
-        typesRecette: data.les_types_recette || [],
-        typesProfil: data.les_types_profil || [],
-        typesDepense: data.les_types_depense || [],
-        typesVente: data.les_types_vente || [],
-        produits: data.les_produits || [],
-        typesClient: data.les_types_client || [],
-        agents: data.les_agents || [],
-        ventes: data.list_ventes || []
+        articles: paramsData.les_articles || [],
+        clients: paramsData.les_clients || [],
+        fournisseurs: paramsData.les_fournisseurs || [],
+        unites: paramsData.unites || [],
+        sites: paramsData.les_sites || [],
+        typesCuisson: paramsData.les_types_cuisson || [],
+        typesUnite: paramsData.unites || [],
+        typesRecette: paramsData.les_types_recette || [],
+        typesProfil: paramsData.les_types_profil || [],
+        typesDepense: paramsData.les_types_depense || [],
+        typesVente: paramsData.les_types_vente || [],
+        produits: paramsData.les_produits || [],
+        typesClient: paramsData.les_types_client || [],
+        agents: paramsData.les_agents || [],
+        ventes: paramsData.list_ventes || []
       };
       
       console.log('💾 Mise à jour du contexte...');
