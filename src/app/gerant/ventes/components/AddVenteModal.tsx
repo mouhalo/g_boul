@@ -9,7 +9,7 @@ import { ParamsContext } from '@/app/contexts/ParamsContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 
-import ArticleVenteModal, { ArticlePossible, ArticleVenteDetail, PrixOption } from '@/components/ventes/ArticleVenteModal';
+import ArticleVenteModal, { ArticlePossible, ArticleVenteDetail, PrixOption } from '@/app/manager/ventes/components/ArticleVenteModal';
 import { SelectList } from '@/components/ui/select-list';
 
 // Props pour le modal

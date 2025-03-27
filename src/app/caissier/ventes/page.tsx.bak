@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useContext,useRef } from 'react';
+import { useEffect, useState, useCallback, useContext } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 //import { useParams } from 'next/navigation';
@@ -75,10 +75,6 @@ export default function GestionVentesPage() {
     startIndex: ventePagination.offset,
     endIndex: Math.min((ventePagination.currentPage * ventePagination.limit) - 1, ventePagination.totalItems - 1)
   };
-
-
-
-
 
   // Chargement des ventes (avec filtres et pagination)
   const loadVentes = useCallback(async () => {
@@ -223,12 +219,11 @@ export default function GestionVentesPage() {
       ventePagination.setItems(paginatedVentes);
       ventePagination.setTotalItems(total);
 
-      const filterData = detailsResponse && detailsResponse.length > 0 ? detailsResponse : [];
-    
+      if (detailsResponse && detailsResponse.length > 0) {
+        loadFilterOptions(detailsResponse);
+      }
       console.log("Ventes chargées:", ventesGrouped.length);
       console.log("Ventes paginées:", paginatedVentes.length);
-      return { ventesGrouped, filterData };
-
     } catch (error) {
       console.error("Erreur lors du chargement des ventes:", error);
       toast({
@@ -242,7 +237,7 @@ export default function GestionVentesPage() {
       setIsLoading(false);
       console.log("Fin de loadVentes() - Désactivation de isLoading");
     }
-  }, [selectedSite, selectedTypeVente, selectedArticle, selectedAgent, dateDebut, dateFin, ventePagination, toast]);
+  }, [selectedSite, selectedTypeVente, selectedArticle, selectedAgent, dateDebut, dateFin, ventePagination, toast, loadFilterOptions]);
 
   // Chargement des articles vendus pour l'onglet "Articles vendus"
   const loadArticlesVendus = useCallback(async () => {
@@ -323,132 +318,126 @@ export default function GestionVentesPage() {
     loadArticlesVendus();
   };
 
-  // Chargement initial au montage de la page
-  // Effet de chargement initial simplifié
-useEffect(() => {
-  console.log("Effet de chargement initial");
-  
-  // Initialiser les dates
-  const now = new Date();
-  setDateDebut(new Date(now.getFullYear(), now.getMonth(), 1));
-  setDateFin(new Date());
-  
-  // Ne pas charger automatiquement les ventes ici
-}, []); // Dépendances vides pour n'exécuter qu'au montage
-
-// En haut du composant
-const initialLoadComplete = useRef(false);
-// Fonction pour traiter les données de filtre
-const processFilterData = useCallback((data: Array<{
-  id_type: number;
-  nom_type: string;
-  id_article: number;
-  nom_article: string;
-  id_agent: number;
-  nom_agent: string;
-  id_client: number;
-  nom_acteur: string;
-}>) => {
-  if (!data || !data.length) return;
-  
-  // Types
-  const typesMap = new Map<number, TypeVariable>();
-  const articlesMap = new Map<number, Article>();
-  const agentsMap = new Map<number, Agent>();
-  const clientsMap = new Map<number, {id_client: number, nom_client: string}>();
-  
-  // Traiter les données sans dépendre des états actuels
-  data.forEach(item => {
+  const loadFilterOptions = (data: {
+    id_type: number;
+    nom_type: string;
+    id_article: number;
+    nom_article: string;
+    id_agent: number;
+    nom_agent: string;
+    id_client: number;
+    nom_acteur: string;
+  }[]) => {
+    if (!data || !data.length) return;  
     // Types
-    if (item.id_type && !typesMap.has(item.id_type)) {
-      typesMap.set(item.id_type, {
-        id_type: item.id_type,
-        libelle: item.nom_type || 'Non défini',
-        nom_variable: `type_${item.id_type}`
-      });
-    }
+    const typesSet = new Set<number>();
+    const typesArray: TypeVariable[] = [];
     
     // Articles
-    if (item.id_article && !articlesMap.has(item.id_article)) {
-      articlesMap.set(item.id_article, {
-        id_article: item.id_article,
-        nom_article: item.nom_article,
-        nom_type: item.nom_type || '',
-        id_type: item.id_type || 0,
-        pu_livreur: 0,
-        pu_boutique: 0,
-        pu_revente: 0,
-        nb_jour: 0,
-        id_site: 0
-      });
-    }
+    const articlesSet = new Set<number>();
+    const articlesArray: Article[] = [];
     
     // Agents
-    if (item.id_agent && !agentsMap.has(item.id_agent)) {
-      agentsMap.set(item.id_agent, {
-        id_agent: item.id_agent,
-        nom_agent: item.nom_agent,
-        id_type_agent: 0,
-        id_site: 0,
-        id_profil: 0,
-        libelle_profil: '',
-        nom_site: ''
-      });
-    }
+    const agentsSet = new Set<number>();
+    const agentsArray: Agent[] = [];
     
     // Clients
-    if (item.id_client && !clientsMap.has(item.id_client)) {
-      clientsMap.set(item.id_client, {
-        id_client: item.id_client,
-        nom_client: item.nom_acteur || 'Client sans nom'
-      });
-    }
-  });
+    const clientsSet = new Set<number>();
+    const clientsArray: {id_client: number, nom_client: string}[] = [];
+    
+    data.forEach(item => {
+      // Types
+      if (item.id_type && !typesSet.has(item.id_type)) {
+        typesSet.add(item.id_type);
+        typesArray.push({
+          id_type: item.id_type,
+          libelle: item.nom_type || 'Non défini',
+          nom_variable: `type_${item.id_type}`
+        });
+      }
+      
+      // Articles
+      if (item.id_article && !articlesSet.has(item.id_article)) {
+        articlesSet.add(item.id_article);
+        articlesArray.push({
+          id_article: item.id_article,
+          nom_article: item.nom_article,
+          nom_type: item.nom_type || '',
+          id_type: item.id_type || 0,
+          pu_livreur: 0,
+          pu_boutique: 0,
+          pu_revente: 0,
+          nb_jour: 0,
+          id_site: 0
+        });
+      }
+      
+      // Agents
+      if (item.id_agent && !agentsSet.has(item.id_agent)) {
+        agentsSet.add(item.id_agent);
+        agentsArray.push({
+          id_agent: item.id_agent,
+          nom_agent: item.nom_agent,
+          id_type_agent: 0,
+          id_site: 0,
+          id_profil: 0,
+          libelle_profil: '',
+          nom_site: ''
+        });
+      }
+      
+      // Clients
+      if (item.id_client && !clientsSet.has(item.id_client)) {
+        clientsSet.add(item.id_client);
+        clientsArray.push({
+          id_client: item.id_client,
+          nom_client: item.nom_acteur || 'Client sans nom'
+        });
+      }
+    });
 
-  // Convertir les Maps en Arrays et trier
-  const typesArray = Array.from(typesMap.values()).sort((a, b) => 
-    (a.libelle || '').localeCompare(b.libelle || '')
-  );
+    // Tri des arrays
+    typesArray.sort((a, b) => (a.libelle || '').localeCompare(b.libelle || ''));
+    articlesArray.sort((a, b) => (a.nom_article || '').localeCompare(b.nom_article || ''));
+    agentsArray.sort((a, b) => (a.nom_agent || '').localeCompare(b.nom_agent || ''));
+    clientsArray.sort((a, b) => (a.nom_client || '').localeCompare(b.nom_client || ''));
+    
+    const typesAreEqual = JSON.stringify(typesArray) === JSON.stringify(availableTypes);
+  const articlesAreEqual = JSON.stringify(articlesArray) === JSON.stringify(availableArticles);
+  const agentsAreEqual = JSON.stringify(agentsArray) === JSON.stringify(availableAgents);
+  const clientsAreEqual = JSON.stringify(clientsArray) === JSON.stringify(availableClients);
+
+    // Mise à jour des états
+    if (!typesAreEqual) setAvailableTypes(typesArray);
+    if (!articlesAreEqual) setAvailableArticles(articlesArray);
+    if (!agentsAreEqual) setAvailableAgents(agentsArray);
+    if (!clientsAreEqual) setAvailableClients(clientsArray);
+  };
+
+  // Chargement initial au montage de la page
+  useEffect(() => {
+    console.log("Effet de chargement initial");
+    
+    // Initialiser les dates dans tous les cas
+    const now = new Date();
+    setDateDebut(new Date(now.getFullYear(), now.getMonth(), 1));
+    setDateFin(new Date());
+    
+    // Lancer le chargement des ventes une seule fois au montage du composant
+    const timer = setTimeout(() => {
+      console.log("Exécution forcée de loadVentes()");
+      loadVentes();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [loadVentes]); // Dépendances vides pour n'exécuter qu'au montage
   
-  const articlesArray = Array.from(articlesMap.values()).sort((a, b) => 
-    (a.nom_article || '').localeCompare(b.nom_article || '')
-  );
-  
-  const agentsArray = Array.from(agentsMap.values()).sort((a, b) => 
-    (a.nom_agent || '').localeCompare(b.nom_agent || '')
-  );
-  
-  const clientsArray = Array.from(clientsMap.values()).sort((a, b) => 
-    (a.nom_client || '').localeCompare(b.nom_client || '')
-  );
-
-  // Mettre à jour les états
-  setAvailableTypes(typesArray);
-  setAvailableArticles(articlesArray);
-  setAvailableAgents(agentsArray);
-  setAvailableClients(clientsArray);
-}, []);
-
-// Fonction pour charger et traiter les données
-const loadDataAndProcess = useCallback(async () => {
-  try {
-    console.log("Exécution de loadDataAndProcess");
-    const result = await loadVentes();
-    if (result) {
-      processFilterData(result.filterData);
-    }
-  } catch (error) {
-    console.error("Erreur lors du chargement des données:", error);
-  }
-}, [loadVentes, processFilterData]);
-
-// Dans l'effet pour charger les données
-useEffect(() => {
-  if (!initialLoadComplete.current && activeTab === 'ventes') {
-    loadDataAndProcess();
-    initialLoadComplete.current = true;
-  }
-}, [activeTab, loadDataAndProcess]);
+  // Effet pour recharger les ventes quand les filtres changent
+//useEffect(() => {
+//  if (selectedSite || selectedTypeVente || selectedArticle || selectedAgent || selectedClient) {
+//    loadVentes();
+//  }
+//}, [selectedSite, selectedTypeVente, selectedArticle, selectedAgent, selectedClient, loadVentes]);
 
   // Charger les articles vendus quand on passe à l'onglet articles
   useEffect(() => {

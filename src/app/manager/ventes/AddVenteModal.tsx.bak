@@ -30,9 +30,11 @@ interface GetVentesPossiblesResponseItem {
   };
 }
 
-// Interface pour la réponse de l'API save_vente
-interface SaveVenteResponseItem {
-  save_vente: string; // "OK" en cas de succès
+// Interface pour le site
+interface Site {
+  id_site: number;
+  nom_site: string;
+  id_boul: number;
 }
 
 const AddVenteModal: React.FC<AddVenteModalProps> = ({
@@ -53,8 +55,7 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
   const [venteDetails, setVenteDetails] = useState<ArticleVenteDetail[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
-  const [encaissementManuel, setEncaissementManuel] = useState<boolean>(false);
+
 
   // 2) États pour le petit « sous-formulaire » de saisie
   const [showArticleModal, setShowArticleModal] = useState<boolean>(false);
@@ -74,22 +75,12 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
       case 1: pu = articleToSell.pu_boutique; break;
       case 2: pu = articleToSell.pu_livreur;  break;
       case 3: pu = articleToSell.pu_revente;  break;
-      case 4: pu = newPuLibre;                break; // prix libre
+      case 4: pu = newPuLibre;               break; // prix libre
     }
     const total = (newQte * pu);
     setTotalLigne(total);
-    
-    // Mettre à jour mtEncaisse seulement si l'utilisateur n'a pas modifié manuellement
-    if (!encaissementManuel) {
-      setMtEncaisse(total);
-    }
-  }, [articleToSell, encaissementManuel]);
-
-  const handleMtEncaisseChange = (value: number) => {
-    setMtEncaisse(value);
-    setEncaissementManuel(true);
-  };
-
+    setMtEncaisse(total); // par défaut
+  }, [articleToSell]);
 
   // 6) Effet pour recalculer quand qte ou prixOption changent
   useEffect(() => {
@@ -180,7 +171,6 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
           toast({
             title: "Succès",
             description: `${formattedArticles.length} articles disponibles trouvés`,
-            variant: "default",
           });
           return; // Sortir de la fonction après succès
         }
@@ -216,12 +206,12 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
     setPuLibre(0);
     setMtEncaisse(0);
     setTotalLigne(0);
-    setEncaissementManuel(false); // Réinitialiser l'état
     setShowArticleModal(true);
+  //  setIsArticleDropdownOpen(false); // Fermer la liste déroulante après sélection
   };
 
   // 7) Valider l'article sélectionné et l'ajouter au tableau
-  const handleAjouterArticle = (venteDetail: ArticleVenteDetail): void => {
+  const handleValiderArticle = (venteDetail: ArticleVenteDetail): void => {
     if (!articleToSell || venteDetail.qte <= 0) {
       toast({
         title: "Erreur",
@@ -271,10 +261,10 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
       });
       return;
     }
-  
+
     // Activer l'indicateur de sauvegarde
     setIsSaving(true);
-  
+
     try {
       // Formater la date
       const dateString = format(selectedDate, 'yyyy-MM-dd');
@@ -282,17 +272,24 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
       // ID de l'agent qui fait la vente
       const idAgent = user?.id_agent || 0;
       
-      // Construire les requêtes SQL pour chaque détail
-      const detailsRequetes = [];
-      
+      // Étape 1: Créer l'entête de vente
+      const sQl = `
+        SELECT * FROM save_vente(${selectedSite}, '${dateString}', 'N/A', ${idAgent})
+      `;
+      const saveResponse = await envoyerRequeteApi<GetVentesPossiblesResponseItem[]>('boulangerie', sQl);
+
+      if (!saveResponse || !saveResponse[0] || saveResponse[0].get_ventes_possibles.code !== 200) {
+        throw new Error("Erreur lors de la sauvegarde de la vente");
+      }
+
+      // Insertion des détails
       for (const detail of venteDetails) {
         // Déterminer l'ID du client (si fourni ou 0 par défaut)
         const idClient = detail.id_client || 0;
         
         // Déterminer le type de vente (si fourni ou utiliser type_prix par défaut)
         const idTypeVente = detail.id_type_vente || detail.type_prix;
-        const val_neutre = '#';
-        // Ajouter la requête SQL pour ce détail
+        
         const detailSql = `
           INSERT INTO detail_vente (id_site, id_type, id_article, qte, pu, id_vente, id_client, mt_encaisse)
           VALUES (
@@ -301,36 +298,18 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
             ${detail.id_article},
             ${detail.qte},
             ${detail.pu},
-            ${val_neutre},
+            '#',
             ${idClient},
             ${detail.mt_encaisse}
           )
         `;
         
-        detailsRequetes.push(detailSql);
-      }
-      
-      // Combiner toutes les requêtes détaillées en une seule chaîne
-      const detailSql = detailsRequetes.join('; ');
-      
-      // Échapper les apostrophes simples pour éviter les erreurs SQL
-      const detailSqlEscaped = detailSql.replace(/'/g, "''");
-      console.log("requete de detail", detailSqlEscaped)
-      // Créer la requête principale qui inclut tous les détails
-      const sql = `
-        SELECT * FROM save_vente(${selectedSite}, '${dateString}', '${detailSqlEscaped}', ${idAgent})
-      `;
-      console.log("requete de sauvegarde", sql)
-      // Envoyer une seule requête à l'API
-      const saveResponse = await envoyerRequeteApi<SaveVenteResponseItem[]>('boulangerie', sql);
-      console.log("requete de sauvegarde", saveResponse)
-      if (!saveResponse || !saveResponse[0] || saveResponse[0].save_vente !== "OK") {
-        throw new Error("Erreur lors de la sauvegarde de la vente");
+        await envoyerRequeteApi('boulangerie', detailSql);
       }
       
       toast({
         title: "Succès",
-        description: `Vente enregistrée avec succès pour le site ${siteParams?.sites?.find(s => s.id_site === selectedSite)?.nom_site || selectedSite}`,
+        description: "La vente a été enregistrée avec succès",
       });
       
       // Fermer le modal et appeler le callback de succès
@@ -346,19 +325,6 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleConfirmation = () => {
-    setShowConfirmation(true);
-  };
-
-  const handleConfirmSave = () => {
-    handleSaveVente();
-    setShowConfirmation(false);
-  };
-
-  const handleCancelSave = () => {
-    setShowConfirmation(false);
   };
 
   // Calcul du total de la vente
@@ -379,7 +345,7 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
             <div className="flex-1">
               <SelectList
                 label="Site"
-                items={siteParams?.sites?.map((site) => ({
+                items={siteParams?.sites?.map((site: Site) => ({
                   id: site.id_site,
                   label: site.nom_site,
                   id_boul: site.id_boul
@@ -399,7 +365,7 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
               type="date"
               value={format(selectedDate, 'yyyy-MM-dd')}
               onChange={(e) => setSelectedDate(new Date(e.target.value))}
-              className="border text-gray-500 p-2 rounded text-sm focus:ring-red-500 focus:border-red-500"
+              className="border p-2 rounded text-sm focus:ring-red-500 focus:border-red-500"
             />
           </div>
 
@@ -413,7 +379,7 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
               Annuler vente
             </Button>
             <Button 
-              onClick={handleConfirmation} 
+              onClick={handleSaveVente} 
               className="bg-red-600 hover:bg-red-700 text-white"
               disabled={isSaving || venteDetails.length === 0}
             >
@@ -451,12 +417,12 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
         {venteDetails.length > 0 && (
           <div className="mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
             <div className="flex justify-between">
-              <span className="font-medium text-green-900">Total vente:</span>
-              <span className="font-bold text-green-900">{totalVente.toLocaleString()} FCFA</span>
+              <span className="font-medium">Total vente:</span>
+              <span className="font-bold">{totalVente.toLocaleString()} FCFA</span>
             </div>
-            <div className="flex justify-between ">
-              <span className="font-medium text-green-700">Total encaissé:</span>
-              <span className="font-bold text-green-700">{totalEncaisse.toLocaleString()} FCFA</span>
+            <div className="flex justify-between">
+              <span className="font-medium">Total encaissé:</span>
+              <span className="font-bold">{totalEncaisse.toLocaleString()} FCFA</span>
             </div>
           </div>
         )}
@@ -487,10 +453,11 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
         {venteDetails.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full border text-sm">
-              <thead className=" font-normal bg-red-500 text-white">
+              <thead className="bg-gray-100 font-normal bg-red-500 text-white">
                 <tr>
                   <th className="p-2 border">Article</th>
-                  <th className="p-2 border">Client</th>
+                  <th className="p-2 border">Type</th>
+                  <th className="p-2 border">Type Prix</th>
                   <th className="p-2 border">Quantité</th>
                   <th className="p-2 border">PU</th>
                   <th className="p-2 border">Total</th>
@@ -504,8 +471,14 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
                     <td className="p-2 border">{detail.nom_article}</td>
                     <td className="p-2 border">
                       <Badge variant="outline" className="font-normal">
-                        {detail.client || "Non spécifié"}
+                        {detail.nom_type}
                       </Badge>
+                    </td>
+                    <td className="p-2 border">
+                      {detail.type_prix === 1 && "Boutique"}
+                      {detail.type_prix === 2 && "Livreur"}
+                      {detail.type_prix === 3 && "Revendeur"}
+                      {detail.type_prix === 4 && "Libre"}
                     </td>
                     <td className="p-2 border text-center">{detail.qte}</td>
                     <td className="p-2 border text-right">{detail.pu.toLocaleString()}</td>
@@ -528,7 +501,6 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
           </div>
         )}
 
-        {/* Modal pour ajouter un article */}
         {showArticleModal && articleToSell && (
           <ArticleVenteModal
             article={articleToSell}
@@ -537,29 +509,12 @@ const AddVenteModal: React.FC<AddVenteModalProps> = ({
             puLibre={puLibre}
             mtEncaisse={mtEncaisse}
             totalLigne={totalLigne}
-            onValiderArticle={handleAjouterArticle}
-            onMtEncaisseChange={handleMtEncaisseChange}
+            onValiderArticle={handleValiderArticle}
             onClose={() => {
               setShowArticleModal(false);
               setArticleToSell(null);
             }}
           />
-        )}
-        {showConfirmation && (
-          <Dialog open={showConfirmation} onOpenChange={handleCancelSave}>
-            <DialogContent>
-              <DialogTitle>Confirmation de sauvegarde</DialogTitle>
-              <p >Êtes-vous sûr de vouloir sauvegarder la vente ?</p>
-              <div className="flex justify-end">
-                <Button variant="outline" onClick={handleCancelSave}>
-                  Annuler
-                </Button>
-                <Button variant="default" onClick={handleConfirmSave}>
-                  Sauvegarder
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         )}
       </DialogContent>
     </Dialog>

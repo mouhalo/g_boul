@@ -1,150 +1,88 @@
 'use client';
 
-import { useEffect, useState, useCallback, useContext } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { useEffect, useState, useCallback, useContext,useRef } from 'react';
+import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
-import { useParams } from 'next/navigation';
+//import { useParams } from 'next/navigation';
 import { envoyerRequeteApi } from '@/app/apis/api';
 import { useServerPagination } from '@/hooks/useServerPagination';
 import { UserContext } from '@/app/contexts/UserContext';
-import { ParamsContext, TypeVariable, Site, Article, Agent } from '@/app/contexts/ParamsContext';
-import { Skeleton } from '@/components/ui/skeleton';
-import AddVenteModal from '@/app/manager/ventes/AddVenteModal';
+import { ParamsContext, TypeVariable, Article, Agent } from '@/app/contexts/ParamsContext';
+import AddVenteModal from '@/app/manager/ventes/components/AddVenteModal';
 import VisuelVenteModal from '@/app/manager/ventes/VisuelVenteModal';
-import { Plus, Calendar, Store, ShoppingBag, CreditCard, User } from 'lucide-react';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { CustomPagination } from '@/app/components/CustomPagination';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, ShoppingBag, Package, BarChart, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter,DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+// Importation des composants pour chaque onglet
+import SuiviVentesTab from '@/app/manager/ventes/components/SuiviVentesTab';
+import ArticlesVendusTab from '@/app/manager/ventes/components/ArticlesVendusTab';
+import PageConstruction from '@/app/components/PageConstruction';
 
 // Types
-interface VenteDetail {
-  id_detail: number;
-  id_vente: number;
-  id_article: number;
-  nom_article: string;
-  qte: number;
-  pu: number;
-  total: number;
-  nom_type: string;
-  id_type: number;
-  nom_acteur: string;
-}
-
-interface Vente {
-  id_vente: number;
-  id_site: number;
-  id_boul: number;
-  nom_site: string;
-  date_op: string;
-  id_agent: number;
-  nom_agent: string;
-  id_client: number;
-  nom_acteur: string;
-  total_quantite: number;
-  total_montant: number;
-  total_encaisse: number;
-  details: VenteDetail[];
-}
-
-interface DeleteVenteDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  venteId: number;
-  venteDate: string;
-}
-
-// Composant pour la confirmation de suppression
-const DeleteVenteDialog: React.FC<DeleteVenteDialogProps> = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  venteId,
-  venteDate,
-}) => {
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleConfirm = async () => {
-    setIsDeleting(true);
-    await onConfirm();
-    setIsDeleting(false);
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle style={{ color: "#A52A2A" }}>Confirmer la suppression</DialogTitle>
-          <DialogDescription style={{ color: "#000" }}>
-            Êtes-vous sûr de vouloir supprimer la vente #{venteId} du {venteDate} ? Cette action est irréversible.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex space-x-2 justify-end">
-          <Button variant="outline" onClick={onClose} disabled={isDeleting}>
-            Annuler
-          </Button>
-          <Button variant="destructive" onClick={handleConfirm} disabled={isDeleting}>
-            {isDeleting ? "Suppression..." : "Supprimer"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+import { 
+  Vente, 
+  ArticleVendu,
+  FilterOptions
+} from './types';
 
 export default function GestionVentesPage() {
   const { toast } = useToast();
-  const params = useParams();
-  const bakeryId = params?.bakeryId ? parseInt(params.bakeryId as string) : null;
   const { user } = useContext(UserContext);
   const { params: siteParams } = useContext(ParamsContext);
 
-  // États
+  // État actif des onglets
+  const [activeTab, setActiveTab] = useState<string>("ventes");
+
+  // États communs
   const [isLoading, setIsLoading] = useState(true);
-
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedVente, setSelectedVente] = useState<Vente | null>(null);
-
-  // États pour les filtres
-  const [selectedSite, setSelectedSite] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('');
-  const [selectedArticle, setSelectedArticle] = useState<string>('');
-  const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [dateDebut, setDateDebut] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [dateFin, setDateFin] = useState<Date>(new Date());
 
+
+  // États pour l'onglet "Suivi ventes"
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedVente, setSelectedVente] = useState<Vente | null>(null);
+  const [selectedSite, setSelectedSite] = useState<string>('');
+  const [selectedTypeVente, setSelectedTypeVente] = useState<string>('');
+  const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const [globalTotals, setGlobalTotals] = useState({ montant: 0, encaisse: 0, restant: 0 });
+  const ventePagination = useServerPagination(20); // 20 ventes par page
+
+  // États pour l'onglet "Articles vendus"
+  const [selectedArticle, setSelectedArticle] = useState<string>('');
+  const [selectedClient, setSelectedClient] = useState<string>('');
+  const [articlesVendus, setArticlesVendus] = useState<ArticleVendu[]>([]);
+  const [articlesStats, setArticlesStats] = useState({ totalArticles: 0, totalQuantite: 0, totalMontant: 0 });
+  const [showDeleteDetailDialog, setShowDeleteDetailDialog] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<ArticleVendu | null>(null);
+
   // États pour les options de filtres dynamiques
   const [availableTypes, setAvailableTypes] = useState<TypeVariable[]>([]);
   const [availableArticles, setAvailableArticles] = useState<Article[]>([]);
   const [availableAgents, setAvailableAgents] = useState<Agent[]>([]);
+  const [availableClients, setAvailableClients] = useState<{id_client: number, nom_client: string}[]>([]);
 
-  // Nouveaux états pour les totaux globaux
-  const [globalTotals, setGlobalTotals] = useState({ montant: 0, encaisse: 0 });
-
-  const pagination = useServerPagination(10); // 10 ventes par page
-
-  const paginationInfo = {
-    startIndex: pagination.offset,
-    endIndex: Math.min((pagination.currentPage * pagination.limit) - 1, pagination.totalItems - 1)
+  const ventePaginationInfo = {
+    startIndex: ventePagination.offset,
+    endIndex: Math.min((ventePagination.currentPage * ventePagination.limit) - 1, ventePagination.totalItems - 1)
   };
+
+
+
+
 
   // Chargement des ventes (avec filtres et pagination)
   const loadVentes = useCallback(async () => {
+    console.log("Début de loadVentes() ");
     setIsLoading(true);
     try {
       const filters: string[] = [];
@@ -158,8 +96,8 @@ export default function GestionVentesPage() {
       if (selectedSite !== '') {
         filters.push(`v.id_site = ${selectedSite}`);
       }
-      if (selectedType !== '') {
-        filters.push(`v.id_type = ${selectedType}`);
+      if (selectedTypeVente !== '') {
+        filters.push(`v.id_type = ${selectedTypeVente}`);
       }
       if (selectedArticle !== '') {
         filters.push(`v.id_vente IN (SELECT DISTINCT id_vente FROM list_ventes WHERE id_article = ${selectedArticle})`);
@@ -169,8 +107,6 @@ export default function GestionVentesPage() {
       }
 
       const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
-      console.log("Filtres appliqués:", filters);
-      console.log("Clause WHERE:", whereClause);
 
       const query = `
         SELECT 
@@ -272,16 +208,27 @@ export default function GestionVentesPage() {
       // Calcul des totaux globaux sur toutes les ventes filtrées
       const totalMontantGlobal = ventesGrouped.reduce((sum, vente) => sum + vente.total_montant, 0);
       const totalEncaisseGlobal = ventesGrouped.reduce((sum, vente) => sum + vente.total_encaisse, 0);
-      setGlobalTotals({ montant: totalMontantGlobal, encaisse: totalEncaisseGlobal });
+      const totalRestantGlobal = totalMontantGlobal - totalEncaisseGlobal;
+      
+      setGlobalTotals({ 
+        montant: totalMontantGlobal, 
+        encaisse: totalEncaisseGlobal,
+        restant: totalRestantGlobal
+      });
 
       // Pagination sur les résultats
-      const paginatedVentes = ventesGrouped.slice(0, pagination.limit);
-      pagination.setItems(paginatedVentes);
-      pagination.setTotalItems(total);
+      const startIdx = (ventePagination.currentPage - 1) * ventePagination.limit;
+      const paginatedVentes = ventesGrouped.slice(startIdx, startIdx + ventePagination.limit);
+      
+      ventePagination.setItems(paginatedVentes);
+      ventePagination.setTotalItems(total);
 
-      if (detailsResponse && detailsResponse.length > 0) {
-        loadFilterOptions(detailsResponse);
-      }
+      const filterData = detailsResponse && detailsResponse.length > 0 ? detailsResponse : [];
+    
+      console.log("Ventes chargées:", ventesGrouped.length);
+      console.log("Ventes paginées:", paginatedVentes.length);
+      return { ventesGrouped, filterData };
+
     } catch (error) {
       console.error("Erreur lors du chargement des ventes:", error);
       toast({
@@ -289,138 +236,308 @@ export default function GestionVentesPage() {
         description: "Impossible de charger les ventes. Veuillez réessayer.",
         variant: "destructive",
       });
-      pagination.setItems([]);
-      pagination.setTotalItems(0);
+      ventePagination.setItems([]);
+      ventePagination.setTotalItems(0);
     } finally {
       setIsLoading(false);
+      console.log("Fin de loadVentes() - Désactivation de isLoading");
     }
-  }, [selectedSite, selectedType, selectedArticle, selectedAgent, dateDebut, dateFin, pagination, toast]);
+  }, [selectedSite, selectedTypeVente, selectedArticle, selectedAgent, dateDebut, dateFin, ventePagination, toast]);
 
-  const loadFilterOptions = (data: {
-    id_type: number;
-    nom_type: string;
-    id_article: number;
-    nom_article: string;
-    id_agent: number;
-    nom_agent: string;
-  }[]) => {
-    if (!data || !data.length) return;
-    const typesSet = new Set<number>();
-    const typesArray: TypeVariable[] = [];
-    const articlesSet = new Set<number>();
-    const articlesArray: Article[] = [];
-    const agentsSet = new Set<number>();
-    const agentsArray: Agent[] = [];
-    data.forEach(item => {
-      if (!typesSet.has(item.id_type)) {
-        typesSet.add(item.id_type);
-        typesArray.push({
-          id_type: item.id_type,
-          libelle: item.nom_type || 'vide',
-          nom_variable: `type_${item.id_type}`
-        });
-      }
-      if (!articlesSet.has(item.id_article)) {
-        articlesSet.add(item.id_article);
-        articlesArray.push({
-          id_article: item.id_article,
-          nom_article: item.nom_article,
-          nom_type: item.nom_type || '',
-          id_type: item.id_type || 0,
-          pu_livreur: 0,
-          pu_boutique: 0,
-          pu_revente: 0,
-          nb_jour: 0,
-          id_site: 0
-        });
-      }
-      if (!agentsSet.has(item.id_agent)) {
-        agentsSet.add(item.id_agent);
-        agentsArray.push({
-          id_agent: item.id_agent,
-          nom_agent: item.nom_agent,
-          id_type_agent: 0,
-          id_site: 0,
-          id_profil: 0,
-          libelle_profil: '',
-          nom_site: '' // Ajout de la propriété nom_site requise
-        });
-      }
-    });
-    typesArray.sort((a, b) => {
-      // Vérification que a.libelle et b.libelle ne sont pas null ou undefined
-      const libelleA = a.libelle || '';
-      const libelleB = b.libelle || '';
-      return libelleA.localeCompare(libelleB);
-    });
+  // Chargement des articles vendus pour l'onglet "Articles vendus"
+  const loadArticlesVendus = useCallback(async () => {
+    if (activeTab !== 'articles') return;
     
-    articlesArray.sort((a, b) => {
-      const nomA = a.nom_article || '';
-      const nomB = b.nom_article || '';
-      return nomA.localeCompare(nomB);
-    });
-    
-    agentsArray.sort((a, b) => {
-      const nomA = a.nom_agent || '';
-      const nomB = b.nom_agent || '';
-      return nomA.localeCompare(nomB);
-    });
-    setAvailableTypes(typesArray);
-    setAvailableArticles(articlesArray);
-    setAvailableAgents(agentsArray);
+    setIsLoadingDetails(true);
+    try {
+      const filters: string[] = [];
+      if (dateDebut && dateFin) {
+        filters.push(`v.date_op BETWEEN '${format(dateDebut, 'yyyy-MM-dd')}' AND '${format(dateFin, 'yyyy-MM-dd')}'`);
+      } 
+      if (selectedArticle !== '') {
+        filters.push(`v.id_article = ${selectedArticle}`);
+      }
+      if (selectedClient !== '') {
+        filters.push(`v.id_client = ${selectedClient}`);
+      }
+
+      const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+
+      const query = `
+        SELECT 
+          v.id_detail,
+          v.id_vente, 
+          v.date_op,
+          v.id_article,
+          v.nom_article,
+          v.qte,
+          v.pu,
+          v.total,
+          v.id_client,
+          v.nom_acteur as nom_client
+        FROM list_ventes v
+        ${whereClause}
+        ORDER BY v.date_op DESC, v.nom_article
+      `;
+
+      const response = await envoyerRequeteApi<ArticleVendu[]>('boulangerie', query);
+      
+      if (response && Array.isArray(response)) {
+        setArticlesVendus(response);
+        
+        // Calculer les statistiques
+        const totalArticles = new Set(response.map(a => a.id_article)).size;
+        const totalQuantite = response.reduce((sum, a) => sum + a.qte, 0);
+        const totalMontant = response.reduce((sum, a) => sum + a.total, 0);
+        
+        setArticlesStats({
+          totalArticles,
+          totalQuantite,
+          totalMontant
+        });
+      } else {
+        setArticlesVendus([]);
+        setArticlesStats({ totalArticles: 0, totalQuantite: 0, totalMontant: 0 });
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des articles vendus:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les articles vendus.",
+        variant: "destructive",
+      });
+      setArticlesVendus([]);
+      setArticlesStats({ totalArticles: 0, totalQuantite: 0, totalMontant: 0 });
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  }, [activeTab, dateDebut, dateFin, selectedArticle, selectedClient, toast]);
+
+  // Fonction pour gérer la suppression et l'actualisation d'une vente
+  const handleDeleteVente = () => {
+    loadVentes();
+  };
+
+  // Fonction pour gérer la suppression et l'actualisation d'un détail de vente
+  const handleDeleteDetail = () => {
+    loadArticlesVendus();
   };
 
   // Chargement initial au montage de la page
-  useEffect(() => {
-    if (bakeryId) {
-      const now = new Date();
-      setDateDebut(new Date(now.getFullYear(), now.getMonth(), 1));
-      setDateFin(new Date());
-      const timer = setTimeout(() => {
-        loadVentes();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [bakeryId, loadVentes, user]);
+  // Effet de chargement initial simplifié
+useEffect(() => {
+  console.log("Effet de chargement initial");
+  
+  // Initialiser les dates
+  const now = new Date();
+  setDateDebut(new Date(now.getFullYear(), now.getMonth(), 1));
+  setDateFin(new Date());
+  
+  // Ne pas charger automatiquement les ventes ici
+}, []); // Dépendances vides pour n'exécuter qu'au montage
 
-  // Fonction déclenchée par le bouton "Appliquer"
+// En haut du composant
+const initialLoadComplete = useRef(false);
+// Fonction pour traiter les données de filtre
+const processFilterData = useCallback((data: Array<{
+  id_type: number;
+  nom_type: string;
+  id_article: number;
+  nom_article: string;
+  id_agent: number;
+  nom_agent: string;
+  id_client: number;
+  nom_acteur: string;
+}>) => {
+  if (!data || !data.length) return;
+  
+  // Types
+  const typesMap = new Map<number, TypeVariable>();
+  const articlesMap = new Map<number, Article>();
+  const agentsMap = new Map<number, Agent>();
+  const clientsMap = new Map<number, {id_client: number, nom_client: string}>();
+  
+  // Traiter les données sans dépendre des états actuels
+  data.forEach(item => {
+    // Types
+    if (item.id_type && !typesMap.has(item.id_type)) {
+      typesMap.set(item.id_type, {
+        id_type: item.id_type,
+        libelle: item.nom_type || 'Non défini',
+        nom_variable: `type_${item.id_type}`
+      });
+    }
+    
+    // Articles
+    if (item.id_article && !articlesMap.has(item.id_article)) {
+      articlesMap.set(item.id_article, {
+        id_article: item.id_article,
+        nom_article: item.nom_article,
+        nom_type: item.nom_type || '',
+        id_type: item.id_type || 0,
+        pu_livreur: 0,
+        pu_boutique: 0,
+        pu_revente: 0,
+        nb_jour: 0,
+        id_site: 0
+      });
+    }
+    
+    // Agents
+    if (item.id_agent && !agentsMap.has(item.id_agent)) {
+      agentsMap.set(item.id_agent, {
+        id_agent: item.id_agent,
+        nom_agent: item.nom_agent,
+        id_type_agent: 0,
+        id_site: 0,
+        id_profil: 0,
+        libelle_profil: '',
+        nom_site: ''
+      });
+    }
+    
+    // Clients
+    if (item.id_client && !clientsMap.has(item.id_client)) {
+      clientsMap.set(item.id_client, {
+        id_client: item.id_client,
+        nom_client: item.nom_acteur || 'Client sans nom'
+      });
+    }
+  });
+
+  // Convertir les Maps en Arrays et trier
+  const typesArray = Array.from(typesMap.values()).sort((a, b) => 
+    (a.libelle || '').localeCompare(b.libelle || '')
+  );
+  
+  const articlesArray = Array.from(articlesMap.values()).sort((a, b) => 
+    (a.nom_article || '').localeCompare(b.nom_article || '')
+  );
+  
+  const agentsArray = Array.from(agentsMap.values()).sort((a, b) => 
+    (a.nom_agent || '').localeCompare(b.nom_agent || '')
+  );
+  
+  const clientsArray = Array.from(clientsMap.values()).sort((a, b) => 
+    (a.nom_client || '').localeCompare(b.nom_client || '')
+  );
+
+  // Mettre à jour les états
+  setAvailableTypes(typesArray);
+  setAvailableArticles(articlesArray);
+  setAvailableAgents(agentsArray);
+  setAvailableClients(clientsArray);
+}, []);
+
+// Fonction pour charger et traiter les données
+const loadDataAndProcess = useCallback(async () => {
+  try {
+    console.log("Exécution de loadDataAndProcess");
+    const result = await loadVentes();
+    if (result) {
+      processFilterData(result.filterData);
+    }
+  } catch (error) {
+    console.error("Erreur lors du chargement des données:", error);
+  }
+}, [loadVentes, processFilterData]);
+
+// Dans l'effet pour charger les données
+useEffect(() => {
+  if (!initialLoadComplete.current && activeTab === 'ventes') {
+    loadDataAndProcess();
+    initialLoadComplete.current = true;
+  }
+}, [activeTab, loadDataAndProcess]);
+
+  // Charger les articles vendus quand on passe à l'onglet articles
+  useEffect(() => {
+    if (activeTab === 'articles') {
+      loadArticlesVendus();
+    }
+  }, [activeTab, loadArticlesVendus]);
+
+  // Fonction pour appliquer les filtres (pour les deux onglets)
   const applyFilters = () => {
-    pagination.goToFirstPage();
-    loadVentes();
+    if (activeTab === 'ventes') {
+      ventePagination.goToFirstPage();
+      loadVentes();
+    } else if (activeTab === 'articles') {
+      loadArticlesVendus();
+    }
   };
 
+  // Fonction pour réinitialiser les filtres (pour les deux onglets)
   const resetFilters = () => {
     setSelectedSite('');
-    setSelectedType('');
+    setSelectedTypeVente('');
     setSelectedArticle('');
     setSelectedAgent('');
+    setSelectedClient('');
+    
     const now = new Date();
     setDateDebut(new Date(now.getFullYear(), now.getMonth(), 1));
     setDateFin(new Date());
-    pagination.goToFirstPage();
-    loadVentes();
+    
+    if (activeTab === 'ventes') {
+      ventePagination.goToFirstPage();
+      loadVentes();
+    } else if (activeTab === 'articles') {
+      loadArticlesVendus();
+    }
   };
 
-  const goToFirstPage = () => pagination.goToFirstPage();
-  const goToPreviousPage = () => pagination.goToPreviousPage();
-  const goToNextPage = () => pagination.goToNextPage();
-  const goToLastPage = () => pagination.goToLastPage();
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
+  // Préparation des options de filtre à passer aux composants enfants
+  const filterOptions: FilterOptions = {
+    dateDebut,
+    dateFin,
+    setDateDebut,
+    setDateFin,
+    selectedSite,
+    setSelectedSite,
+    selectedTypeVente, 
+    setSelectedTypeVente,
+    selectedAgent,
+    setSelectedAgent,
+    selectedArticle, 
+    setSelectedArticle,
+    selectedClient,
+    setSelectedClient,
+    availableTypes,
+    availableArticles,
+    availableAgents,
+    availableClients,
+    siteParams,
+    applyFilters,
+    resetFilters
   };
 
-  // 3. Fonction handleViewDetails pour voir les détails d'une vente
+  // Fonctions pour les actions sur les ventes
   const handleViewDetails = (vente: Vente) => {
     setSelectedVente(vente);
     setShowDetailsModal(true);
   };
 
+  // Préparation des fonctions de modification pour les détails d'une vente
+  const detailActions = {
+    handleDeleteDetail,
+    handleDetailDeleteClick: (detail: ArticleVendu) => {
+      setSelectedDetail(detail);
+      setShowDeleteDetailDialog(true);
+    },
+    handleDetailEditClick: () => {
+      toast({
+        title: "Information",
+        description: "La fonctionnalité de modification d'article sera disponible prochainement",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
-      {/* En-tête */}
+      {/* En-tête avec titre et bouton d'ajout */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: "#A52A2A" }}>Gestion des Ventes</h1>
+        <h1 className="text-2xl font-bold text-red-700">Gestion des Ventes</h1>
         <Button 
           onClick={() => {
             setSelectedVente(null);
@@ -432,255 +549,73 @@ export default function GestionVentesPage() {
         </Button>
       </div>
 
-      {/* Zone de filtres */}
-      <div className="bg-amber-50 p-4 rounded-lg mb-6 border border-amber-200">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800">Filtres</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">Date début</label>
-            <input
-              type="date"
-              value={dateDebut ? format(dateDebut, 'yyyy-MM-dd') : ''}
-              onChange={(e) => setDateDebut(new Date(e.target.value))}
-              className="block w-full p-2 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-red-500 focus:border-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">Date fin</label>
-            <input
-              type="date"
-              value={dateFin ? format(dateFin, 'yyyy-MM-dd') : ''}
-              onChange={(e) => setDateFin(new Date(e.target.value))}
-              className="block w-full p-2 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-red-500 focus:border-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">Site</label>
-            <select
-              value={selectedSite}
-              onChange={(e) => {
-                console.log("Site sélectionné:", e.target.value);
-                setSelectedSite(e.target.value);
-              }}
-              className="block w-full p-2 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-red-500 focus:border-red-500"
-            >
-              <option value="">Tous les sites</option>
-              {siteParams?.sites?.map((site: Site) => (
-                <option key={site.id_site} value={site.id_site.toString()}>
-                  {site.nom_site}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">Type de vente</label>
-            <select
-              value={selectedType}
-              onChange={(e) => {
-                console.log("Type sélectionné:", e.target.value);
-                setSelectedType(e.target.value);
-              }}
-              className="block w-full p-2 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-red-500 focus:border-red-500"
-            >
-              <option value="">Tous les types</option>
-              {availableTypes.map((type) => (
-                <option key={type.id_type} value={type.id_type.toString()}>
-                  {type.libelle}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">Article</label>
-            <select
-              value={selectedArticle}
-              onChange={(e) => {
-                console.log("Article sélectionné:", e.target.value);
-                setSelectedArticle(e.target.value);
-              }}
-              className="block w-full p-2 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-red-500 focus:border-red-500"
-            >
-              <option value="">Tous les articles</option>
-              {availableArticles.map((article) => (
-                <option key={article.id_article} value={article.id_article.toString()}>
-                  {article.nom_article}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">Agent</label>
-            <select
-              value={selectedAgent}
-              onChange={(e) => {
-                console.log("Agent sélectionné:", e.target.value);
-                setSelectedAgent(e.target.value);
-              }}
-              className="block w-full p-2 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-red-500 focus:border-red-500"
-            >
-              <option value="">Tous les agents</option>
-              {availableAgents.map((agent) => (
-                <option key={agent.id_agent} value={agent.id_agent.toString()}>
-                  {agent.nom_agent}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="flex justify-end space-x-2">
-          <Button 
-            variant="outline" 
-            onClick={resetFilters}
-            className="border-red-500 text-red-600 hover:bg-red-50"
-          >
-            Réinitialiser
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={applyFilters}
-            className="border-green-500 text-green-600 hover:bg-green-50"
-          >
-            Appliquer
-          </Button>
-        </div>
-      </div>
+      {/* Onglets */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="ventes" className="flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4" /> Suivi ventes
+          </TabsTrigger>
+          <TabsTrigger value="articles" className="flex items-center gap-2">
+            <Package className="h-4 w-4" /> Articles vendus
+          </TabsTrigger>
+          <TabsTrigger value="rendement" className="flex items-center gap-2">
+            <BarChart className="h-4 w-4" /> Rendement
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Affichage des Totaux globaux */}
-      <div className="bg-white p-4 rounded-lg mb-6 shadow border border-gray-300">
-        <p className="text-gray-800 font-medium">
-          Total Montant des Ventes : {globalTotals.montant.toLocaleString()} FCFA
-        </p>
-        <p className="text-gray-800 font-medium">
-          Total Montant Encaisse : {globalTotals.encaisse.toLocaleString()} FCFA
-        </p>
-      </div>
+        {/* Contenu de l'onglet "Suivi ventes" */}
+        {/* Contenu de l'onglet "Suivi ventes" */}
+<TabsContent value="ventes" className="mt-4">
+  {isLoading ? (
+    <div className="flex justify-center items-center p-8">
+      <Loader2 className="h-8 w-8 text-red-600 animate-spin" />
+      <span className="ml-2 text-lg text-gray-600">Chargement des ventes...</span>
+    </div>
+  ) : (
+    <SuiviVentesTab 
+      isLoading={isLoading}
+      filterOptions={filterOptions}
+      ventes={ventePagination.items as Vente[]}
+      globalTotals={globalTotals}
+      pagination={{
+        ...ventePagination,
+        startIndex: ventePaginationInfo.startIndex, 
+        endIndex: ventePaginationInfo.endIndex,
+        paginationInfo: ventePaginationInfo,
+        items: ventePagination.items as Vente[]
+      }}
+      user={user || { libelle_profil: '', id_agent: 0 }}
+      onViewDetails={handleViewDetails}
+      onDeleteClick={(vente: Vente) => {
+        setSelectedVente(vente);
+        setShowDeleteDialog(true);
+      }}
+    />
+  )}
+</TabsContent>
 
-      {/* Affichage des ventes */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, index) => (
-            <Card key={index} className="shadow-md">
-              <CardHeader className="pb-2">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent className="pb-2">
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Skeleton className="h-10 w-full" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : pagination.items.length === 0 ? (
-        <div className="bg-white p-8 text-center rounded-lg shadow">
-          <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium" style={{ color: "#000" }}>Aucune vente trouvée</h3>
-          <p className="text-gray-500">Modifiez vos critères de recherche ou créez une nouvelle vente.</p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(pagination.items as Vente[]).map((vente) => (
-              <Card key={vente.id_vente} className="shadow-md hover:shadow-lg transition-shadow duration-200">
-                <CardHeader className="pb-2" style={{ backgroundColor: "#ffe5e5" }}>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg flex items-center" style={{ color: "#A52A2A" }}>
-                      Vente #{vente.id_vente}
-                    </CardTitle>
-                    <Badge 
-                      className="bg-amber-500 hover:bg-amber-600 transition-colors cursor-pointer"
-                      onClick={() => handleViewDetails(vente)}
-                    >
-                      {vente.details.length} article(s)
-                    </Badge>
-                  </div>
-                  <div className="flex items-center text-gray-600 text-sm mt-1">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    {formatDate(vente.date_op)}
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-3 pb-2">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Store className="h-4 w-4 mr-2" style={{ color: "#A52A2A" }} />
-                        <span style={{ color: "#000" }}>Site:</span>
-                      </div>
-                      <span className="font-medium" style={{ color: "#000" }}>{vente.nom_site}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <ShoppingBag className="h-4 w-4 mr-2" style={{ color: "#A52A2A" }} />
-                        <span style={{ color: "#000" }}>Quantité totale:</span>
-                      </div>
-                      <span className="font-medium" style={{ color: "#000" }}>{vente.total_quantite}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <CreditCard className="h-4 w-4 mr-2" style={{ color: "#A52A2A" }} />
-                        <span style={{ color: "#000" }}>Montant total:</span>
-                      </div>
-                      <span className="font-medium" style={{ color: "#000" }}>
-                        {vente.total_montant.toLocaleString()} FCFA
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <CreditCard className="h-4 w-4 mr-2" style={{ color: "#000" }} />
-                        <span style={{ color: "#000" }}>Montant encaissé:</span>
-                      </div>
-                      <span className="font-medium" style={{ color: "#000" }}>
-                        {vente.total_encaisse.toLocaleString()} FCFA
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <User className="h-4 w-4 mr-2" style={{ color: "#A52A2A" }} />
-                        <span style={{ color: "#000" }}>Agent:</span>
-                      </div>
-                      <span className="font-medium" style={{ color: "#000" }}>{vente.nom_agent}</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-0 pb-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={() => handleViewDetails(vente)}
-                  >
-                    Voir détails
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-          {pagination.totalItems > 0 && (
-            <div className="mt-6 border-t pt-6 flex flex-col items-center" style={{ borderColor: "#A52A2A" }}>
-              <p className="text-sm text-gray-600 mb-3">
-                Affichage de {paginationInfo.startIndex + 1} à {Math.min(paginationInfo.endIndex + 1, pagination.totalItems)} sur {pagination.totalItems} ventes
-              </p>
-              <CustomPagination
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                totalItems={pagination.totalItems}
-                startIndex={paginationInfo.startIndex}
-                endIndex={paginationInfo.endIndex}
-                onFirstPage={goToFirstPage}
-                onPreviousPage={goToPreviousPage}
-                onNextPage={goToNextPage}
-                onLastPage={goToLastPage}
-              />
-            </div>
-          )}
-        </>
-      )}
+        {/* Contenu de l'onglet "Articles vendus" */}
+        <TabsContent value="articles" className="mt-4">
+          <ArticlesVendusTab 
+            isLoading={isLoadingDetails}
+            filterOptions={filterOptions}
+            articlesVendus={articlesVendus}
+            articlesStats={articlesStats}
+            detailActions={detailActions}
+          />
+        </TabsContent>
+
+        {/* Contenu de l'onglet "Rendement" */}
+        <TabsContent value="rendement" className="mt-4">
+          <PageConstruction 
+            title="Page en construction"
+            message="Cette fonctionnalité sera bientôt disponible. Revenez prochainement pour visualiser les statistiques de rendement."
+            icon={<BarChart className="h-24 w-24 text-gray-300" />}
+            buttonText="Revenir à la page des ventes"
+            buttonAction={() => setActiveTab('ventes')}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Modal d'ajout/modification */}
       {showAddModal && (
@@ -710,16 +645,189 @@ export default function GestionVentesPage() {
         />
       )}
 
-      {/* Modal de confirmation de suppression */}
+      {/* Modals de suppression */}
       {showDeleteDialog && selectedVente && (
         <DeleteVenteDialog
           isOpen={showDeleteDialog}
           onClose={() => setShowDeleteDialog(false)}
-          onConfirm={() => {}}
+          onConfirm={handleDeleteVente}
           venteId={selectedVente.id_vente}
           venteDate={format(new Date(selectedVente.date_op), 'dd/MM/yyyy')}
+        />
+      )}
+
+      {showDeleteDetailDialog && selectedDetail && (
+        <DeleteDetailDialog
+          isOpen={showDeleteDetailDialog}
+          onClose={() => setShowDeleteDetailDialog(false)}
+          onConfirm={handleDeleteDetail}
+          detailId={selectedDetail.id_detail}
+          articleName={selectedDetail.nom_article}
         />
       )}
     </div>
   );
 }
+
+// Composants modaux de suppression (gardés dans ce fichier pour simplicité)
+interface DeleteVenteDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  venteId: number;
+  venteDate: string;
+}
+
+interface DeleteDetailDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  detailId: number;
+  articleName: string;
+}
+
+// Composant pour la confirmation de suppression de vente
+const DeleteVenteDialog: React.FC<DeleteVenteDialogProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  venteId,
+  venteDate,
+}) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+
+  const handleConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      const query = `delete from vente where id_vente = ${venteId} returning 'OK' as delete_vente`;
+      const response = await envoyerRequeteApi<{delete_vente: string}[]>('boulangerie', query);
+      
+      if (response && response.length > 0 && response[0].delete_vente === 'OK') {
+        toast({
+          title: "Succès",
+          description: "Vente supprimée avec succès",
+        });
+        onConfirm();
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Échec de la suppression de la vente",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-red-700">Confirmer la suppression</DialogTitle>
+          <DialogDescription>
+            Êtes-vous sûr de vouloir supprimer la vente #{venteId} du {venteDate} ? Cette action est irréversible.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex space-x-2 justify-end">
+          <Button variant="outline" onClick={onClose} disabled={isDeleting}>
+            Annuler
+          </Button>
+          <Button variant="destructive" onClick={handleConfirm} disabled={isDeleting}>
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Suppression...
+              </>
+            ) : (
+              "Supprimer"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Composant pour la confirmation de suppression de détail
+const DeleteDetailDialog: React.FC<DeleteDetailDialogProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  detailId,
+  articleName,
+}) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+
+  const handleConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      const query = `DELETE FROM detail_vente WHERE id_detail = ${detailId} RETURNING 'OK' as delete_detail`;
+      const response = await envoyerRequeteApi<{delete_detail: string}[]>('boulangerie', query);
+      
+      if (response && response.length > 0 && response[0].delete_detail === 'OK') {
+        toast({
+          title: "Succès",
+          description: "Article supprimé avec succès",
+        });
+        onConfirm();
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Échec de la suppression de l'article",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-red-700">Confirmer la suppression</DialogTitle>
+          <DialogDescription>
+            Êtes-vous sûr de vouloir supprimer l&apos;article &quot;{articleName}&quot; (#{detailId}) ? Cette action est irréversible.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex space-x-2 justify-end">
+          <Button variant="outline" onClick={onClose} disabled={isDeleting}>
+            Annuler
+          </Button>
+          <Button variant="destructive" onClick={handleConfirm} disabled={isDeleting}>
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Suppression...
+              </>
+            ) : (
+              "Supprimer"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+        
