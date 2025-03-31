@@ -82,13 +82,13 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center mb-4">
           <Filter className="h-5 w-5 text-red-600 mr-2" />
-          <h3 className="text-lg font-medium">Filtres</h3>
+          <h3 className="text-lg font-medium text-gray-800">Filtres</h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Filtre date début */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Date début:</label>
+            <label className="text-sm font-medium text-gray-800">Date début:</label>
             <div className="flex items-center">
               <Calendar className="h-4 w-4 text-gray-500 mr-2" />
               <input
@@ -102,7 +102,7 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
           
           {/* Filtre date fin */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Date fin:</label>
+            <label className="text-sm font-medium text-gray-800">Date fin:</label>
             <div className="flex items-center">
               <Calendar className="h-4 w-4 text-gray-500 mr-2" />
               <input
@@ -129,7 +129,7 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
               value={filterOptions.selectedSite}
               onChange={(value) => filterOptions.setSelectedSite(typeof value === 'string' ? value : '')}
               placeholder="Tous les sites"
-              className="w-full"
+              className="w-full text-gray-500"
             />
           </div>
           
@@ -144,7 +144,7 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
               value={filterOptions.selectedTypeVente}
               onChange={(value) => filterOptions.setSelectedTypeVente(typeof value === 'string' ? value : '')}
               placeholder="Tous les types"
-              className="w-full"
+              className="w-full text-gray-500"
             />
           </div>
           
@@ -159,7 +159,7 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
               value={filterOptions.selectedAgent}
               onChange={(value) => filterOptions.setSelectedAgent(typeof value === 'string' ? value : '')}
               placeholder="Tous les agents"
-              className="w-full"
+              className="w-full text-gray-500"
             />
           </div>
           
@@ -167,7 +167,7 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
           <div className="flex items-end space-x-2">
             <Button 
               onClick={filterOptions.applyFilters}
-              className="bg-red-600 hover:bg-red-700 text-white flex-1"
+              className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -224,7 +224,7 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
       {/* Navigation de pagination */}
       {pagination.totalItems > 0 && (
         <div className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-800">
             Affichage {pagination.paginationInfo.startIndex + 1} à {pagination.paginationInfo.endIndex + 1} sur {pagination.totalItems} ventes
           </div>
           <div className="space-x-1">
@@ -232,39 +232,39 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
               variant="outline"
               onClick={pagination.goToFirstPage}
               disabled={!pagination.hasPreviousPage || isLoading}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700 text-white"
             >
-              <span className="sr-only">Première page</span>
+              <span className="sr-only text-gray-500">Première page</span>
               <ChevronsLeft className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               onClick={pagination.goToPreviousPage}
               disabled={!pagination.hasPreviousPage || isLoading}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700 text-white"
             >
-              <span className="sr-only">Page précédente</span>
+              <span className="sr-only text-gray-500">Page précédente</span>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm px-2">
+            <span className="text-sm px-2 text-gray-500">
               Page {pagination.currentPage} sur {pagination.totalPages}
             </span>
             <Button
               variant="outline"
               onClick={pagination.goToNextPage}
               disabled={!pagination.hasNextPage || isLoading}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700 text-white"
             >
-              <span className="sr-only">Page suivante</span>
+              <span className="sr-only text-gray-500">Page suivante</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               onClick={pagination.goToLastPage}
               disabled={!pagination.hasNextPage || isLoading}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700 text-white"
             >
-              <span className="sr-only">Dernière page</span>
+              <span className="sr-only text-gray-500">Dernière page</span>
               <ChevronsRight className="h-4 w-4" />
             </Button>
           </div>
