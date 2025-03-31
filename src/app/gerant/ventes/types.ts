@@ -12,6 +12,7 @@ export interface VenteDetail {
   nom_type: string;
   id_type: number;
   nom_acteur: string;
+  mt_encaisse: number;
 }
 
 export interface Vente {

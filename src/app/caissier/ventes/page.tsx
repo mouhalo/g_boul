@@ -196,7 +196,9 @@ export default function GestionVentesPage() {
             total: item.total,
             nom_type: item.nom_type,
             id_type: item.id_type,
-            nom_acteur: item.nom_acteur
+            nom_acteur: item.nom_acteur,
+            mt_encaisse: item.mt_encaisse,
+
           });
           vente.total_quantite += item.qte;
           vente.total_montant += item.total;
@@ -348,6 +350,7 @@ const processFilterData = useCallback((data: Array<{
   nom_agent: string;
   id_client: number;
   nom_acteur: string;
+  mt_encaisse: number;
 }>) => {
   if (!data || !data.length) return;
   
@@ -543,7 +546,7 @@ useEffect(() => {
             setSelectedVente(null);
             setShowAddModal(true);
           }}
-          className="bg-red-600 hover:bg-red-700 text-white"
+          className="bg-red-600 hover:bg-green-700 text-white"
         >
           <Plus className="mr-2 h-4 w-4" /> Nouvelle Vente
         </Button>
