@@ -18,9 +18,16 @@ interface ApiResponse<T = unknown> {
   datas?: T;
 }
 
-function construireRequeteSql(pSQL_Request: string | SqlRequest, additionalParam: string = ''): string {
-  const sqlQuery = typeof pSQL_Request === 'object' ? pSQL_Request.requete : pSQL_Request;
-  
+// 👇 Types de retour attendus
+type ApiReturnType = 'array' | 'number' | 'boolean' | 'object' | 'void';
+
+function construireRequeteSql(
+  pSQL_Request: string | SqlRequest,
+  additionalParam = ''
+): string {
+  const sqlQuery =
+    typeof pSQL_Request === 'object' ? pSQL_Request.requete : pSQL_Request;
+
   let finalQuery = sqlQuery;
   if (typeof pSQL_Request === 'object' && pSQL_Request.parametres) {
     pSQL_Request.parametres.forEach((param, index) => {
@@ -28,13 +35,13 @@ function construireRequeteSql(pSQL_Request: string | SqlRequest, additionalParam
       finalQuery = finalQuery.replace(`$${index + 1}`, paramValue.toString());
     });
   }
-  
+
   return finalQuery + additionalParam;
 }
 
 function construireXml(pAppName: string, requeteSql: string): string {
   if (!requeteSql) throw new ApiError('Requête SQL invalide');
-  
+
   const sql_text = requeteSql.toString().replace(/\n/g, ' ').trim();
   return `<?xml version="1.0" encoding="UTF-8"?>
     <requete>
@@ -48,7 +55,31 @@ function construireXml(pAppName: string, requeteSql: string): string {
     </requete>`;
 }
 
-export async function envoyerRequeteApi<T>(pAppName: string, pRequete: string | SqlRequest, additionalParam: string = ''): Promise<T | null> {
+// 👇 Gestion de fallback en fonction du type attendu
+function getFallbackValue<T>(expected: ApiReturnType): T {
+  switch (expected) {
+    case 'array':
+      return [] as T;
+    case 'number':
+      return 0 as T;
+    case 'boolean':
+      return false as T;
+    case 'object':
+      return null as T;
+    case 'void':
+      return undefined as T;
+    default:
+      return null as T;
+  }
+}
+
+// 💥 La version robuste et future-proof
+export async function envoyerRequeteApi<T>(
+  pAppName: string,
+  pRequete: string | SqlRequest,
+  additionalParam = '',
+  expectedReturnType: ApiReturnType = 'array'
+): Promise<T> {
   try {
     const sqlQuery = construireRequeteSql(pRequete, additionalParam);
     const xml = construireXml(pAppName, sqlQuery);
@@ -66,17 +97,23 @@ export async function envoyerRequeteApi<T>(pAppName: string, pRequete: string | 
 
     if (!response.ok) {
       const errorText = await response.text();
+
+      // 🔥 Gestion des 404 -> fallback value
+      if (response.status === 404) {
+        console.warn(`🟡 Données non trouvées. Fallback -> ${expectedReturnType}`);
+        return getFallbackValue<T>(expectedReturnType);
+      }
+
       throw new ApiError(`Erreur réseau: ${response.status} ${errorText}`);
     }
 
-    const data = await response.json() as ApiResponse<T>;
-    return data?.datas || null;
+    const data = (await response.json()) as ApiResponse<T>;
+    return data?.datas ?? getFallbackValue<T>(expectedReturnType);
 
   } catch (error) {
-    console.error('Erreur API:', error instanceof Error ? error.message : 'Unknown error');
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+    console.error('🚨 Erreur API:', error instanceof Error ? error.message : 'Unknown error');
+
+    // Ne rethrow plus. On retourne un fallback safe.
+    return getFallbackValue<T>(expectedReturnType);
   }
 }

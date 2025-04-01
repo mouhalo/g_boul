@@ -159,10 +159,10 @@ export default function GestionVentesPage() {
         total: number;
         mt_encaisse: number;
         reliquat: number;
-      }[]>('boulangerie', query);
-
-      const countResponse = await envoyerRequeteApi<[{ total: number }]>('boulangerie', countQuery);
-      const total = countResponse && countResponse.length > 0 ? countResponse[0].total : 0;
+      }[]>('boulangerie', query, '', 'array');
+     
+      const countResponse = await envoyerRequeteApi<{ total: number }[]>('boulangerie', countQuery, '', 'array');
+      const total = countResponse.length > 0 ? countResponse[0].total : 0;
 
       // Regrouper les détails par vente
       const ventesMap = new Map<number, Vente>();
