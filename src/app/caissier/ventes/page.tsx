@@ -8,8 +8,8 @@ import { envoyerRequeteApi } from '@/app/apis/api';
 import { useServerPagination } from '@/hooks/useServerPagination';
 import { UserContext } from '@/app/contexts/UserContext';
 import { ParamsContext, TypeVariable, Article, Agent } from '@/app/contexts/ParamsContext';
-import AddVenteModal from '@/app/manager/ventes/components/AddVenteModal';
-import VisuelVenteModal from '@/app/manager/ventes/VisuelVenteModal';
+import AddVenteModal from '@/app/caissier/ventes/components/AddVenteModal';
+import VisuelVenteModal from '@/app/caissier/ventes/VisuelVenteModal';
 import { format } from 'date-fns';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,8 +17,8 @@ import { Plus, ShoppingBag, Package, BarChart, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter,DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Importation des composants pour chaque onglet
-import SuiviVentesTab from '@/app/manager/ventes/components/SuiviVentesTab';
-import ArticlesVendusTab from '@/app/manager/ventes/components/ArticlesVendusTab';
+import SuiviVentesTab from '@/app/caissier/ventes/components/SuiviVentesTab';
+import ArticlesVendusTab from '@/app/caissier/ventes/components/ArticlesVendusTab';
 import PageConstruction from '@/app/components/PageConstruction';
 
 // Types
@@ -159,10 +159,10 @@ export default function GestionVentesPage() {
         total: number;
         mt_encaisse: number;
         reliquat: number;
-      }[]>('boulangerie', query, '', 'array');
+      }[]>('boulangerie', query);
 
-      const countResponse = await envoyerRequeteApi<{ total: number }[]>('boulangerie', countQuery, '', 'array');
-      const total = countResponse.length > 0 ? countResponse[0].total : 0;
+      const countResponse = await envoyerRequeteApi<[{ total: number }]>('boulangerie', countQuery);
+      const total = countResponse && countResponse.length > 0 ? countResponse[0].total : 0;
 
       // Regrouper les détails par vente
       const ventesMap = new Map<number, Vente>();

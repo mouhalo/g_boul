@@ -18,11 +18,26 @@ const inputVariants = {
 export default function Home() {
   const { handleLogin, loading, error } = useLogin();
   const [formData, setFormData] = useState({
-    code_boulangerie: 'XV1VK',
-    login: 'mouhamed',
-    password: '777301221@'
+    code_boulangerie: '',
+    login: '',
+    password: ''
   });
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Charger les données depuis localStorage au chargement de la page
+  useEffect(() => {
+    const savedData = localStorage.getItem('bakeryLoginData');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        setFormData(parsedData);
+        setRememberMe(true);
+      } catch (e) {
+        console.error('Erreur lors de la lecture des données sauvegardées:', e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     console.log('Initial Form Data:', formData);
@@ -31,7 +46,30 @@ export default function Home() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Code Boulangerie:', formData.code_boulangerie);
+    
+    // Sauvegarder dans localStorage si rememberMe est activé
+    if (rememberMe) {
+      localStorage.setItem('bakeryLoginData', JSON.stringify(formData));
+    } else {
+      // Supprimer les données si l'utilisateur ne veut pas les sauvegarder
+      localStorage.removeItem('bakeryLoginData');
+    }
+    
     handleLogin(formData);
+  };
+
+  const toggleRememberMe = () => {
+    setRememberMe(!rememberMe);
+  };
+
+  const clearSavedData = () => {
+    localStorage.removeItem('bakeryLoginData');
+    setFormData({
+      code_boulangerie: '',
+      login: '',
+      password: ''
+    });
+    setRememberMe(false);
   };
 
   return (
@@ -130,6 +168,32 @@ export default function Home() {
                     />
                   </motion.div>
                 ))}
+
+                {/* Option Se souvenir de moi */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="rememberMe"
+                      checked={rememberMe}
+                      onChange={toggleRememberMe}
+                      className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                    />
+                    <label htmlFor="rememberMe" className="text-sm text-gray-700">
+                      Se souvenir de moi
+                    </label>
+                  </div>
+                  
+                  {rememberMe && localStorage.getItem('bakeryLoginData') && (
+                    <button
+                      type="button"
+                      onClick={clearSavedData}
+                      className="text-sm text-red-600 hover:text-red-800"
+                    >
+                      Effacer mes données
+                    </button>
+                  )}
+                </div>
 
                 {error && (
                   <motion.div 

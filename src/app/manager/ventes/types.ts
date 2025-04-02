@@ -42,6 +42,9 @@ export interface ArticleVendu {
   total: number;
   nom_client: string;
   id_client: number;
+  nom_type: string;
+  id_type: number;
+  libelle_type: string;
 }
 
 export interface FilterOptions {
@@ -81,7 +84,6 @@ export interface DetailActions {
   handleDetailDeleteClick: (detail: ArticleVendu) => void;
   handleDetailEditClick: (detail: ArticleVendu) => void;
 }
-
 export interface PaginationInfo {
     currentPage: number;
     totalPages: number;

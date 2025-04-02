@@ -8,8 +8,8 @@ import { envoyerRequeteApi } from '@/app/apis/api';
 import { useServerPagination } from '@/hooks/useServerPagination';
 import { UserContext } from '@/app/contexts/UserContext';
 import { ParamsContext, TypeVariable, Article, Agent } from '@/app/contexts/ParamsContext';
-import AddVenteModal from '@/app/manager/ventes/components/AddVenteModal';
-import VisuelVenteModal from '@/app/manager/ventes/VisuelVenteModal';
+import AddVenteModal from '@/app/gerant/ventes/components/AddVenteModal';
+import VisuelVenteModal from '@/app/gerant/ventes/VisuelVenteModal';
 import { format } from 'date-fns';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,8 +17,8 @@ import { Plus, ShoppingBag, Package, BarChart, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter,DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Importation des composants pour chaque onglet
-import SuiviVentesTab from '@/app/manager/ventes/components/SuiviVentesTab';
-import ArticlesVendusTab from '@/app/manager/ventes/components/ArticlesVendusTab';
+import SuiviVentesTab from '@/app/gerant/ventes/components/SuiviVentesTab';
+import ArticlesVendusTab from '@/app/gerant/ventes/components/ArticlesVendusTab';
 import PageConstruction from '@/app/components/PageConstruction';
 
 // Types
@@ -160,10 +160,9 @@ export default function GestionVentesPage() {
         mt_encaisse: number;
         reliquat: number;
       }[]>('boulangerie', query, '', 'array');
-     
+
       const countResponse = await envoyerRequeteApi<{ total: number }[]>('boulangerie', countQuery, '', 'array');
       const total = countResponse.length > 0 ? countResponse[0].total : 0;
-
       // Regrouper les détails par vente
       const ventesMap = new Map<number, Vente>();
       if (detailsResponse && detailsResponse.length > 0) {
@@ -276,7 +275,9 @@ export default function GestionVentesPage() {
           v.pu,
           v.total,
           v.id_client,
-          v.nom_acteur as nom_client
+          v.nom_acteur as nom_client,
+          v.id_type,
+          v.nom_type
         FROM list_ventes v
         ${whereClause}
         ORDER BY v.date_op DESC, v.nom_article

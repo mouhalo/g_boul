@@ -226,8 +226,9 @@ const VisuelVenteModal: React.FC<VisuelVenteModalProps> = ({ open, onClose, vent
         </div>
         
         {/* Tableau des détails */}
-        <ScrollArea className="flex-grow">
-          <div className="p-4">
+        <ScrollArea className="flex-grow overflow-auto" style={{ maxHeight: '400px' }}>
+  <div className="p-4">
+    <div className="overflow-visible">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-100">
@@ -298,8 +299,9 @@ const VisuelVenteModal: React.FC<VisuelVenteModalProps> = ({ open, onClose, vent
                 </TableRow>
               </TableBody>
             </Table>
-          </div>
-        </ScrollArea>
+            </div>
+  </div>
+</ScrollArea>
         
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 flex justify-end">
@@ -444,7 +446,7 @@ const VisuelVenteModal: React.FC<VisuelVenteModalProps> = ({ open, onClose, vent
                   }
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white"
-                disabled={qteRetournee <= 0}
+                disabled={qteRetournee === 0 && montantEncaisse === 0}
               >
                 Sauver
               </Button>

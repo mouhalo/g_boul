@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -23,6 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { envoyerRequeteApi } from '@/app/apis/api';
+import EditDetailModal from '@/app/manager/ventes/components/EditDetailModal';
 
 // Types
 import { 
@@ -50,6 +52,77 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
   articlesStats,
   detailActions
 }) => {
+  // États locaux pour les filtres
+  const [articlesList, setArticlesList] = useState<{ id: string; label: string }[]>([]);
+  const [clientsList, setClientsList] = useState<{ id: string; label: string }[]>([]);
+  const [loadingFilters, setLoadingFilters] = useState(false);
+  
+  // État pour le modal d'édition
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<ArticleVendu | null>(null);
+
+  // useEffect pour charger directement les articles et clients
+  useEffect(() => {
+    const loadFilterData = async () => {
+      setLoadingFilters(true);
+
+      try {
+        // Requête pour les articles
+        const articlesQuery = `
+          SELECT DISTINCT a.id_article, a.nom_article
+          FROM list_ventes a
+          WHERE a.id_type != 44
+          ORDER BY a.nom_article
+        `;
+        
+        // Requête pour les clients
+        const clientsQuery = `
+          SELECT DISTINCT c.id_client, c.nom_acteur as nom_client
+          FROM list_ventes c
+          WHERE c.id_type != 44
+          ORDER BY c.nom_acteur
+        `;
+        
+        // Exécuter les requêtes en parallèle
+        const [articlesData, clientsData] = await Promise.all([
+          envoyerRequeteApi('boulangerie', articlesQuery),
+          envoyerRequeteApi('boulangerie', clientsQuery)
+        ]);
+
+        // Transformer les données pour les listes déroulantes
+        if (articlesData && Array.isArray(articlesData)) {
+          const formattedArticles = articlesData.map(article => ({
+            id: article.id_article.toString(),
+            label: article.nom_article
+          }));
+          setArticlesList(formattedArticles);
+          console.log("Articles chargés pour les filtres:", formattedArticles.length);
+        }
+
+        if (clientsData && Array.isArray(clientsData)) {
+          const formattedClients = clientsData.map(client => ({
+            id: client.id_client.toString(),
+            label: client.nom_client
+          }));
+          setClientsList(formattedClients);
+          console.log("Clients chargés pour les filtres:", formattedClients.length);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des données de filtres:", error);
+      } finally {
+        setLoadingFilters(false);
+      }
+    };
+
+    loadFilterData();
+  }, []);
+
+  // Fonction pour gérer le clic sur l'icône d'édition
+  const handleEditClick = (detail: ArticleVendu) => {
+    setSelectedDetail(detail);
+    setShowEditModal(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Zone de filtres */}
@@ -88,36 +161,36 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
             </div>
           </div>
           
-          {/* Filtre Article */}
+          {/* Filtre Article - Utilise articlesList local au lieu de filterOptions.availableArticles */}
           <div className="space-y-2 text-gray-700">
             <SelectList
               label="Article"
-              items={filterOptions.availableArticles?.map((article) => ({
-                id: article.id_article.toString(),
-                label: article.nom_article,
-              })) || []}
+              items={articlesList}
               value={filterOptions.selectedArticle}
               onChange={(value) => filterOptions.setSelectedArticle(value ? String(value) : '')}
               placeholder="Tous les articles"
               className="w-full"
               searchable={true}
             />
+            {loadingFilters && articlesList.length === 0 && (
+              <p className="text-xs text-orange-500">Chargement des articles...</p>
+            )}
           </div>
           
-          {/* Filtre Client */}
+          {/* Filtre Client - Utilise clientsList local au lieu de filterOptions.availableClients */}
           <div className="space-y-2 text-gray-700">
             <SelectList
               label="Client"
-              items={filterOptions.availableClients?.map((client) => ({
-                id: client.id_client.toString(),
-                label: client.nom_client,
-              })) || []}
+              items={clientsList}
               value={filterOptions.selectedClient}
               onChange={(value) => filterOptions.setSelectedClient(value ? String(value) : '')}
               placeholder="Tous les clients"
               className="w-full"
               searchable={true}
             />
+            {loadingFilters && clientsList.length === 0 && (
+              <p className="text-xs text-orange-500">Chargement des clients...</p>
+            )}
           </div>
           
           {/* Boutons d'action */}
@@ -125,9 +198,9 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
             <Button 
               onClick={filterOptions.applyFilters}
               className="bg-red-600 hover:bg-red-700 text-white flex-1"
-              disabled={isLoading}
+              disabled={isLoading || loadingFilters}
             >
-              {isLoading ? (
+              {isLoading || loadingFilters ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Chargement...
@@ -140,7 +213,7 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
               variant="outline" 
               onClick={filterOptions.resetFilters}
               className="border-red-500 text-red-600 hover:bg-red-50"
-              disabled={isLoading}
+              disabled={isLoading || loadingFilters}
             >
               Réinitialiser
             </Button>
@@ -178,11 +251,11 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
         </Card>
       </div>
       
-      {/* Tableau des articles vendus */}
+      {/* Tableau des articles vendus avec défilement vertical */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center">
           <ListFilter className="h-5 w-5 text-red-600 mr-2" />
-          <h3 className="text-lg font-medium">Liste des articles vendus</h3>
+          <h3 className="text-lg font-medium text-gray-700">Liste des articles vendus</h3>
         </div>
         
         {isLoading ? (
@@ -191,9 +264,9 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
             <span className="ml-2 text-lg text-gray-600">Chargement des articles...</span>
           </div>
         ) : articlesVendus.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="h-96 overflow-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 bg-white z-10">
                 <TableRow className="bg-gray-100">
                   <TableHead>Date</TableHead>
                   <TableHead>Article</TableHead>
@@ -213,7 +286,7 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
                     <TableCell className="whitespace-nowrap text-gray-700">
                       <div className="flex items-center">
                         <PackageOpen className="h-4 w-4 text-red-600 mr-2" />
-                        <span className="font-medium text-gray-700">{detail.nom_article}</span>
+                        <span className="font-medium text-gray-700">{detail.nom_article}:{detail.nom_type }</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center text-gray-700">{detail.qte}</TableCell>
@@ -225,7 +298,7 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => detailActions.handleDetailEditClick(detail)}
+                          onClick={() => handleEditClick(detail)}
                           className="text-blue-600 hover:bg-blue-50 border-blue-200 h-8 w-8 p-0"
                           title="Modifier"
                         >
@@ -253,6 +326,16 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* Modal d'édition */}
+      {showEditModal && (
+        <EditDetailModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onDetailUpdated={detailActions.handleDeleteDetail} // Réutilisation de la fonction de mise à jour
+          detail={selectedDetail}
+        />
+      )}
     </div>
   );
 };

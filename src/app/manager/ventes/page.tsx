@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useContext,useRef } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
-//import { useParams } from 'next/navigation';
+import EditDetailModal from '@/app/manager/ventes/components/EditDetailModal';
 import { envoyerRequeteApi } from '@/app/apis/api';
 import { useServerPagination } from '@/hooks/useServerPagination';
 import { UserContext } from '@/app/contexts/UserContext';
@@ -50,6 +50,8 @@ export default function GestionVentesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteDetailDialog, setShowDeleteDetailDialog] = useState(false);
+  const [showEditDetailModal, setShowEditDetailModal] = useState(false);
   const [selectedVente, setSelectedVente] = useState<Vente | null>(null);
   const [selectedSite, setSelectedSite] = useState<string>('');
   const [selectedTypeVente, setSelectedTypeVente] = useState<string>('');
@@ -62,7 +64,6 @@ export default function GestionVentesPage() {
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [articlesVendus, setArticlesVendus] = useState<ArticleVendu[]>([]);
   const [articlesStats, setArticlesStats] = useState({ totalArticles: 0, totalQuantite: 0, totalMontant: 0 });
-  const [showDeleteDetailDialog, setShowDeleteDetailDialog] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<ArticleVendu | null>(null);
 
   // États pour les options de filtres dynamiques
@@ -275,7 +276,9 @@ export default function GestionVentesPage() {
           v.pu,
           v.total,
           v.id_client,
-          v.nom_acteur as nom_client
+          v.nom_acteur as nom_client,
+          v.id_type,
+          v.nom_type
         FROM list_ventes v
         ${whereClause}
         ORDER BY v.date_op DESC, v.nom_article
@@ -527,11 +530,9 @@ useEffect(() => {
       setSelectedDetail(detail);
       setShowDeleteDetailDialog(true);
     },
-    handleDetailEditClick: () => {
-      toast({
-        title: "Information",
-        description: "La fonctionnalité de modification d'article sera disponible prochainement",
-      });
+    handleDetailEditClick: (detail: ArticleVendu) => {
+      setSelectedDetail(detail);
+      setShowEditDetailModal(true);
     }
   };
 
@@ -665,6 +666,14 @@ useEffect(() => {
           onConfirm={handleDeleteDetail}
           detailId={selectedDetail.id_detail}
           articleName={selectedDetail.nom_article}
+        />
+      )}
+      {showEditDetailModal && selectedDetail && (
+        <EditDetailModal
+          isOpen={showEditDetailModal}
+          onClose={() => setShowEditDetailModal(false)}
+          onDetailUpdated={handleDeleteDetail}
+          detail={selectedDetail}
         />
       )}
     </div>
