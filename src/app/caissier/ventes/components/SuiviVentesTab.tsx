@@ -15,13 +15,13 @@ import {
   Store,
   ShoppingBag,
   User,
-  CreditCard
+  CreditCard,
+  Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { SelectList } from '@/components/ui/select-list';
 import { Badge } from '@/components/ui/badge';
-import { Agent } from '@/app/contexts/ParamsContext';
 
 // Types
 import { 
@@ -64,6 +64,7 @@ interface SuiviVentesTabProps {
   } | null;
   onViewDetails: (vente: Vente) => void;
   onDeleteClick: (vente: Vente) => void;
+  onAddVente: () => void;
 }
 
 const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
@@ -74,7 +75,8 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
   pagination,
   user,
   onViewDetails,
-  onDeleteClick
+  onDeleteClick,
+  onAddVente
 }) => {
   return (
     <div className="space-y-6">
@@ -114,33 +116,14 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
             </div>
           </div>
           
-          {/* Filtre Site */}
-          <div className="space-y-2">
-            <SelectList
-              label="Site"
-              items={filterOptions.siteParams?.sites?.map((site: {
-                id_site: number | string;
-                nom_site: string;
-                code_site: string;
-              }) => ({
-                id: site.id_site.toString(),
-                label: site.nom_site,
-              })) || []}
-              value={filterOptions.selectedSite}
-              onChange={(value) => filterOptions.setSelectedSite(typeof value === 'string' ? value : '')}
-              placeholder="Tous les sites"
-              className="w-full"
-            />
-          </div>
-          
-          {/* Filtre Type Vente */}
+          {/* Filtre Type de vente */}
           <div className="space-y-2">
             <SelectList
               label="Type de vente"
-              items={filterOptions.availableTypes?.map((type) => ({
+              items={filterOptions.availableTypes.map((type) => ({
                 id: type.id_type.toString(),
                 label: type.libelle,
-              })) || []}
+              }))}
               value={filterOptions.selectedTypeVente}
               onChange={(value) => filterOptions.setSelectedTypeVente(typeof value === 'string' ? value : '')}
               placeholder="Tous les types"
@@ -152,10 +135,10 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
           <div className="space-y-2">
             <SelectList
               label="Agent"
-              items={filterOptions.availableAgents?.map((agent: Agent) => ({
+              items={filterOptions.availableAgents.map((agent) => ({
                 id: agent.id_agent.toString(),
                 label: agent.nom_agent,
-              })) || []}
+              }))}
               value={filterOptions.selectedAgent}
               onChange={(value) => filterOptions.setSelectedAgent(typeof value === 'string' ? value : '')}
               placeholder="Tous les agents"
@@ -167,7 +150,7 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
           <div className="flex items-end space-x-2">
             <Button 
               onClick={filterOptions.applyFilters}
-              className="bg-red-600 hover:bg-red-700 text-white flex-1"
+              className="bg-red-600 hover:bg-red-700 text-white"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -186,6 +169,13 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
               disabled={isLoading}
             >
               Réinitialiser
+            </Button>
+            <Button 
+              onClick={onAddVente}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={isLoading}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Nouvelle Vente
             </Button>
           </div>
         </div>
@@ -279,7 +269,7 @@ const SuiviVentesTab: React.FC<SuiviVentesTabProps> = ({
         </div>
       ) : ventes.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ventes.map((vente) => (
+          {ventes.filter(vente => vente.id_site === user?.id_site).map((vente) => (
             <Card key={vente.id_vente} className="shadow-md hover:shadow-lg transition-shadow duration-200">
               <CardHeader className="pb-2" style={{ backgroundColor: "#ffe5e5" }}>
                 <div className="flex justify-between items-start">

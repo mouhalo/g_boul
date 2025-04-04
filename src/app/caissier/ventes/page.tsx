@@ -8,12 +8,12 @@ import { envoyerRequeteApi } from '@/app/apis/api';
 import { useServerPagination } from '@/hooks/useServerPagination';
 import { UserContext } from '@/app/contexts/UserContext';
 import { ParamsContext, TypeVariable, Article, Agent } from '@/app/contexts/ParamsContext';
-import AddVenteModal from '@/app/caissier/ventes/components/AddVenteModal';
+import AddVenteModalCaisse from '@/app/caissier/ventes/components/AddVenteModalCaisse';
 import VisuelVenteModal from '@/app/caissier/ventes/VisuelVenteModal';
 import { format } from 'date-fns';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ShoppingBag, Package, BarChart, Loader2 } from 'lucide-react';
+import { ShoppingBag, Package, BarChart, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter,DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Importation des composants pour chaque onglet
@@ -541,15 +541,6 @@ useEffect(() => {
       {/* En-tête avec titre et bouton d'ajout */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-red-700">Gestion des Ventes</h1>
-        <Button 
-          onClick={() => {
-            setSelectedVente(null);
-            setShowAddModal(true);
-          }}
-          className="bg-red-600 hover:bg-green-700 text-white"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Nouvelle Vente
-        </Button>
       </div>
 
       {/* Onglets */}
@@ -561,9 +552,7 @@ useEffect(() => {
           <TabsTrigger value="articles" className="flex items-center gap-2">
             <Package className="h-4 w-4" /> Articles vendus
           </TabsTrigger>
-          <TabsTrigger value="rendement" className="flex items-center gap-2">
-            <BarChart className="h-4 w-4" /> Rendement
-          </TabsTrigger>
+     
         </TabsList>
 
         {/* Contenu de l'onglet "Suivi ventes" */}
@@ -592,6 +581,10 @@ useEffect(() => {
       onDeleteClick={(vente: Vente) => {
         setSelectedVente(vente);
         setShowDeleteDialog(true);
+      }}
+      onAddVente={() => {
+        setSelectedVente(null);
+        setShowAddModal(true);
       }}
     />
   )}
@@ -622,13 +615,13 @@ useEffect(() => {
 
       {/* Modal d'ajout/modification */}
       {showAddModal && (
-        <AddVenteModal 
+        <AddVenteModalCaisse 
           isOpen={showAddModal}
           onClose={() => {
             setShowAddModal(false);
             setSelectedVente(null);
           }}
-          onVenteAdded={() => {
+          onSave={() => {
             setShowAddModal(false);
             setSelectedVente(null);
             loadVentes();

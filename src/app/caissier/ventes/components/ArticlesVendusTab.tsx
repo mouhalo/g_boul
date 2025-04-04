@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Button } from '@/components/ui/button';
+import { UserContext } from '@/app/contexts/UserContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Filter, 
@@ -31,7 +32,7 @@ import {
   ArticleVendu, 
   FilterOptions, 
   DetailActions 
-} from '@/app/manager/ventes/types';
+} from '@/app/caissier/ventes/types';
 
 interface ArticlesVendusTabProps {
   isLoading: boolean;
@@ -56,7 +57,7 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
   const [articlesList, setArticlesList] = useState<{ id: string; label: string }[]>([]);
   const [clientsList, setClientsList] = useState<{ id: string; label: string }[]>([]);
   const [loadingFilters, setLoadingFilters] = useState(false);
-
+  const { user } = useContext(UserContext);
   // État pour le modal d'édition
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<ArticleVendu | null>(null);
@@ -71,16 +72,16 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
         const articlesQuery = `
           SELECT DISTINCT a.id_article, a.nom_article
           FROM list_ventes a
-          WHERE a.id_type != 44
+          WHERE a.id_type != 44 and a.id_site = ${user?.id_site}
           ORDER BY a.nom_article
         `;
         
         // Requête pour les clients
         const clientsQuery = `
-          SELECT DISTINCT c.id_client, c.nom_acteur as nom_client
+          SELECT DISTINCT c.id_client, c.nom_acteur as nom_client, c.id_site
           FROM list_ventes c
-          WHERE c.id_type != 44
-          ORDER BY c.nom_client
+          WHERE c.id_type != 44 and c.id_site = ${user?.id_site}
+          ORDER BY c.nom_acteur
         `;
         
         // Exécuter les requêtes en parallèle
@@ -115,7 +116,7 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
     };
 
     loadFilterData();
-  }, []);
+  }, [user?.id_site]);
 
   // Fonction pour gérer le clic sur l'icône d'édition
   const handleEditClick = (detail: ArticleVendu) => {
@@ -301,6 +302,7 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
                           onClick={() => handleEditClick(detail)}
                           className="text-blue-600 hover:bg-blue-50 border-blue-200 h-8 w-8 p-0"
                           title="Modifier"
+                          disabled={user?.libelle_profil === "Caissier"}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -310,6 +312,7 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
                           onClick={() => detailActions.handleDetailDeleteClick(detail)}
                           className="text-red-600 hover:bg-red-50 border-red-200 h-8 w-8 p-0"
                           title="Supprimer"
+                          disabled={user?.libelle_profil === "Caissier"}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
