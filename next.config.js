@@ -1,8 +1,15 @@
 /** @type {import('next').NextConfig} */
+// Nous définissons la version directement ici pour éviter d'utiliser require
+// Cette valeur doit correspondre à celle dans package.json
+const APP_VERSION = '0.1.0';
+
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
     optimizeCss: true,
+  },
+  env: {
+    APP_VERSION: APP_VERSION,
   },
   images: {
     domains: ['localhost'],

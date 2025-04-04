@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { QrCode, User, Lock, ChevronRight } from 'lucide-react';
 import useLogin from './hooks/useLogin';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { APP_VERSION } from './constants/version';
 
 const inputVariants = {
   focus: {
@@ -217,6 +218,16 @@ export default function Home() {
                   <span>{loading ? 'Connexion...' : 'Entrer'}</span>
                   {!loading && <ChevronRight size={20} className="ml-2" />}
                 </motion.button>
+                
+                {/* Copyright et version */}
+                <div className="mt-6 text-center">
+                  <p className="text-xs text-gray-500">
+                    &copy; {new Date().getFullYear()} Les Délices de Donaye. Tous droits réservés.
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Version {APP_VERSION}
+                  </p>
+                </div>
               </form>
             </div>
           </motion.div>
