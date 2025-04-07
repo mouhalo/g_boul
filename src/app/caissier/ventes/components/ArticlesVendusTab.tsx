@@ -287,11 +287,11 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
                     <TableCell className="whitespace-nowrap text-gray-700">
                       <div className="flex items-center">
                         <PackageOpen className="h-4 w-4 text-red-600 mr-2" />
-                        <span className="font-medium text-gray-700">{detail.nom_article}:{detail.nom_type }</span>
+                        <span className="font-medium text-gray-700">{detail.nom_article}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center text-gray-700">{detail.qte}</TableCell>
-                    <TableCell className="text-right text-gray-700">{detail.pu.toLocaleString()} FCFA</TableCell>
+                    <TableCell className="text-right text-gray-700">{detail.pu ===0 ? detail.nom_type : detail.pu.toLocaleString()} </TableCell>
                     <TableCell className="text-right font-medium text-gray-700">{detail.total.toLocaleString()} FCFA</TableCell>
                     <TableCell className="text-gray-700">{detail.nom_client || "Client au comptant"}</TableCell>
                     <TableCell>
@@ -302,7 +302,7 @@ const ArticlesVendusTab: React.FC<ArticlesVendusTabProps> = ({
                           onClick={() => handleEditClick(detail)}
                           className="text-blue-600 hover:bg-blue-50 border-blue-200 h-8 w-8 p-0"
                           title="Modifier"
-                          disabled={user?.libelle_profil === "Caissier"}
+                          
                         >
                           <Edit className="h-4 w-4" />
                         </Button>

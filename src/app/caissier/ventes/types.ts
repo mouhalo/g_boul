@@ -40,6 +40,7 @@ export interface ArticleVendu {
   qte: number;
   pu: number;
   total: number;
+  mt_encaisse: number;
   nom_client: string;
   id_client: number;
   nom_type: string;
@@ -84,7 +85,6 @@ export interface DetailActions {
   handleDetailDeleteClick: (detail: ArticleVendu) => void;
   handleDetailEditClick: (detail: ArticleVendu) => void;
 }
-
 export interface PaginationInfo {
     currentPage: number;
     totalPages: number;

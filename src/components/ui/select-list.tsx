@@ -46,6 +46,9 @@ export interface SelectListProps<T extends SelectItem> {
   ariaLabel?: string;
   name?: string;
   id?: string;
+  
+  // Props de défilement
+  dropdownMaxHeight?: string;
 }
 
 export function SelectList<T extends SelectItem>({
@@ -72,6 +75,7 @@ export function SelectList<T extends SelectItem>({
   ariaLabel,
   name,
   id,
+  dropdownMaxHeight = "250px",
 }: SelectListProps<T>) {
   // États
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -222,7 +226,7 @@ export function SelectList<T extends SelectItem>({
             "w-full border rounded-md p-2 flex justify-between items-center text-red-500",
             "transition-colors duration-200",
             disabled 
-              ? "bg-gray-900 cursor-not-allowed opacity-70" 
+              ? "bg-gray-100 cursor-not-allowed opacity-70" 
               : "cursor-pointer hover:border-gray-400",
             isOpen 
               ? "border-red-500 ring-1 ring-red-500" 
@@ -233,6 +237,7 @@ export function SelectList<T extends SelectItem>({
           id={id || name}
         >
           <span className={cn(
+            "truncate max-w-[90%]",
             value ? "text-gray-900" : "text-gray-500"
           )}>
             {selectedItem 
@@ -268,32 +273,43 @@ export function SelectList<T extends SelectItem>({
             id="select-dropdown"
             className={cn(
               "absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg",
-              "overflow-hidden animate-in fade-in-0 zoom-in-95 ",
-              "max-h-60",
+              "overflow-hidden animate-in fade-in-0 zoom-in-95",
               dropdownClassName
             )}
             ref={dropdownRef}
+            style={{ maxHeight: dropdownMaxHeight }}
           >
             {/* Zone de recherche */}
-            {searchable && (
-              <div className="p-2 border-b border-gray-200">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-                    placeholder={searchPlaceholder}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              </div>
-            )}
+{searchable && (
+  <div className="p-2 border-b border-gray-200 sticky top-0 bg-white z-10">
+    <div className="relative">
+      <Search className="absolute left-2 top-2.5 h-4 w-4 text-red-500" />
+      <input
+        ref={searchInputRef}
+        type="text"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500 placeholder-blue-500 text-blue-600"
+        placeholder={searchPlaceholder}
+        onClick={(e) => e.stopPropagation()}
+        autoComplete="off"
+      />
+    </div>
+  </div>
+)}
             
-            {/* Liste des éléments */}
-            <ScrollArea className="max-h-48">
+            {/* Liste des éléments avec ScrollArea */}
+            <ScrollArea 
+              className={cn(
+                "overflow-auto",
+                searchable ? "max-h-[calc(100%-48px)]" : "max-h-[100%]"
+              )}
+              style={{ 
+                maxHeight: searchable 
+                  ? `calc(${dropdownMaxHeight} - 48px)`
+                  : dropdownMaxHeight
+              }}
+            >
               {filteredItems.length > 0 ? (
                 <div className="py-1">
                   {filteredItems.map((item, index) => (
@@ -317,9 +333,9 @@ export function SelectList<T extends SelectItem>({
                         renderItem(item, String(item[idKey]) === String(value))
                       ) : (
                         <>
-                          <span>{String(item[labelKey])}</span>
+                          <span className="truncate">{String(item[labelKey])}</span>
                           {String(item[idKey]) === String(value) && (
-                            <Check className="h-4 w-4 text-red-600" />
+                            <Check className="h-4 w-4 text-red-600 flex-shrink-0 ml-2" />
                           )}
                         </>
                       )}

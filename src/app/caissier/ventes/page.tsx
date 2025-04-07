@@ -13,12 +13,13 @@ import VisuelVenteModal from '@/app/caissier/ventes/VisuelVenteModal';
 import { format } from 'date-fns';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShoppingBag, Package, BarChart, Loader2 } from 'lucide-react';
+import { ShoppingBag, Package, BarChart, Loader2, CreditCard } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter,DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Importation des composants pour chaque onglet
 import SuiviVentesTab from '@/app/caissier/ventes/components/SuiviVentesTab';
 import ArticlesVendusTab from '@/app/caissier/ventes/components/ArticlesVendusTab';
+import VueEncaissementCaisse from '@/app/caissier/ventes/components/VueEncaissementCaisse';
 import PageConstruction from '@/app/components/PageConstruction';
 
 // Types
@@ -276,7 +277,9 @@ export default function GestionVentesPage() {
           v.pu,
           v.total,
           v.id_client,
-          v.nom_acteur as nom_client
+          v.nom_acteur as nom_client,
+          v.id_type,
+          v.nom_type
         FROM list_ventes v
         ${whereClause}
         ORDER BY v.date_op DESC, v.nom_article
@@ -453,10 +456,16 @@ useEffect(() => {
   }
 }, [activeTab, loadDataAndProcess]);
 
-  // Charger les articles vendus quand on passe à l'onglet articles
+  // Charger les articles vendus ou encaissements quand on passe aux onglets respectifs
   useEffect(() => {
     if (activeTab === 'articles') {
       loadArticlesVendus();
+    } else if (activeTab === 'encaissements') {
+      // Réinitialiser éventuellement les filtres spécifiques aux encaissements si nécessaire
+      // et laisser le composant VueEncaissementCaisse charger ses propres données
+      setIsLoadingDetails(true);
+      // Le délais de chargement sera géré par le composant lui-même
+      setTimeout(() => setIsLoadingDetails(false), 100);
     }
   }, [activeTab, loadArticlesVendus]);
 
@@ -545,12 +554,15 @@ useEffect(() => {
 
       {/* Onglets */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="ventes" className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4" /> Suivi ventes
           </TabsTrigger>
           <TabsTrigger value="articles" className="flex items-center gap-2">
             <Package className="h-4 w-4" /> Articles vendus
+          </TabsTrigger>
+          <TabsTrigger value="encaissements" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" /> Encaissements
           </TabsTrigger>
      
         </TabsList>
@@ -598,6 +610,14 @@ useEffect(() => {
             articlesVendus={articlesVendus}
             articlesStats={articlesStats}
             detailActions={detailActions}
+          />
+        </TabsContent>
+
+        {/* Contenu de l'onglet "Encaissements" */}
+        <TabsContent value="encaissements" className="mt-4">
+          <VueEncaissementCaisse 
+            isLoading={isLoadingDetails}
+            filterOptions={filterOptions}
           />
         </TabsContent>
 

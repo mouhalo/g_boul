@@ -52,7 +52,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { icon: BarChart2, label: 'Etats', href: `/${profile}/etats` },
         { icon: FileText, label: 'Rapports', href: `/${profile}/rapports` },
         { icon: DollarSign, label: 'Recettes', href: `/${profile}/recettes` },
-        { icon: ClipboardList, label: 'Dépenses', href: `/${profile}/depenses` },
+        { icon: ClipboardList, label: 'Dépenses', href: `/${profile}/depense` },
         { icon: Warehouse, label: 'Stocks', href: `/${profile}/stocks` },
         { icon: Package, label: 'Productions', href: `/${profile}/cuisson` },
         { icon: ShoppingCart, label: 'Ventes', href: `/${profile}/ventes` },
@@ -61,7 +61,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       'gerant': [
         { icon: FileText, label: 'Rapports', href: `/${profile}/rapports` },
         { icon: DollarSign, label: 'Recettes', href: `/${profile}/recettes` },
-        { icon: ClipboardList, label: 'Dépenses', href: `/${profile}/depenses` },
+        { icon: ClipboardList, label: 'Dépenses', href: `/${profile}/depense` },
         { icon: Warehouse, label: 'Stocks', href: `/${profile}/stocks` },
         { icon: Package, label: 'Productions', href: `/${profile}/cuisson` },
         { icon: ShoppingCart, label: 'Ventes', href: `/${profile}/ventes` },
@@ -74,6 +74,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       'caissier': [
         { icon: Package, label: 'Productions', href: `/${profile}/cuisson` },
         { icon: ShoppingCart, label: 'Ventes', href: `/${profile}/ventes` },
+        { icon: ClipboardList, label: 'Dépenses', href: `/${profile}/depense` },
       ],
     };
 

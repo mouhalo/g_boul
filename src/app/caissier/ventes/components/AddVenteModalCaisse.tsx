@@ -478,7 +478,7 @@ export default function AddVenteModalCaisse({
           {venteDetails.length > 0 && (
             <div className="p-3 bg-gray-50 rounded-md border border-gray-200 mb-4">
               <div className="flex justify-between items-center">
-                <div className="space-y-1">
+                <div className="space-y-1 w-full">
                   <div className="flex justify-between">
                     <span className="font-medium text-green-900">Total vente:</span>
                     <span className="font-bold text-green-900 ml-4">{totalVente.toLocaleString()} FCFA</span>
@@ -487,25 +487,37 @@ export default function AddVenteModalCaisse({
                     <span className="font-medium text-green-700">Total encaissé:</span>
                     <span className="font-bold text-green-700 ml-4">{totalEncaisse.toLocaleString()} FCFA</span>
                   </div>
+                  
+                  {/* Indicateur de paiement */}
+                  {totalVente !== totalEncaisse && (
+                    <div className="flex justify-between pt-1 border-t border-gray-200 mt-1">
+                      <span className={`font-medium ${totalEncaisse < totalVente ? 'text-orange-600' : 'text-blue-600'}`}>
+                        {totalEncaisse < totalVente ? 'Restant à payer:' : 'Trop-perçu:'}
+                      </span>
+                      <span className={`font-bold ml-4 ${totalEncaisse < totalVente ? 'text-orange-600' : 'text-blue-600'}`}>
+                        {Math.abs(totalVente - totalEncaisse).toLocaleString()} FCFA
+                      </span>
+                    </div>
+                  )}
                 </div>
-                
-                <div className="space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={onClose} 
-                    className="border-red-500 text-red-600 hover:bg-red-50"
-                    disabled={isSaving}
-                  >
-                    Annuler
-                  </Button>
-                  <Button 
-                    onClick={handleConfirmation} 
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                    disabled={isSaving || venteDetails.length === 0}
-                  >
-                    {isSaving ? "Sauvegarde en cours..." : "Sauvegarder"}
-                  </Button>
-                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={onClose} 
+                  className="border-red-500 text-red-600 hover:bg-red-50"
+                  disabled={isSaving}
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={handleConfirmation} 
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  disabled={isSaving || venteDetails.length === 0}
+                >
+                  {isSaving ? "Sauvegarde en cours..." : "Sauvegarder"}
+                </Button>
               </div>
             </div>
           )}
