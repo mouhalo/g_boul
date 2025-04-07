@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { UserContext } from '@/app/contexts/UserContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,7 +112,7 @@ const VueEncaissementCaisse: React.FC<VueEncaissementCaisseProps> = ({
   }, []);
 
   // Chargement des encaissements
-  const loadEncaissements = async () => {
+  const loadEncaissements = useCallback(async () => {
     setIsLoading(true);
     try {
       // Construction des filtres
@@ -187,12 +187,12 @@ const VueEncaissementCaisse: React.FC<VueEncaissementCaisseProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filterOptions.dateDebut, filterOptions.dateFin, filterOptions.selectedClient, user?.id_site, searchTerm]);
 
   // Charger les encaissements au départ et quand les filtres changent
   useEffect(() => {
     loadEncaissements();
-  }, [filterOptions.dateDebut, filterOptions.dateFin, filterOptions.selectedClient, user?.id_site]);
+  }, [loadEncaissements]);
 
   // Fonction pour appliquer les filtres manuellement (recherche et bouton Appliquer)
   const handleApplyFilters = () => {
