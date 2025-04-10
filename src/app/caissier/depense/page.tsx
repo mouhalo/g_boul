@@ -259,13 +259,13 @@ export default function GestionDepensesPage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      {/* En-tête avec titre et bouton d'ajout */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-red-700">Gestion des Dépenses</h1>
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
+      {/* En-tête avec titre et bouton d'ajout - ajustement pour responsivité */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 mt-16">
+        <h1 className="text-xl sm:text-2xl font-bold text-red-700">Gestion des Dépenses</h1>
         <Button 
           onClick={handleAddDepense}
-          className="bg-red-600 hover:bg-red-700 text-white"
+          className="bg-red-600 hover:bg-red-700 text-white self-start sm:self-auto w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Nouvelle dépense
@@ -273,18 +273,18 @@ export default function GestionDepensesPage() {
       </div>
 
       {/* Zone de filtres */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
         <div className="flex items-center mb-4">
-          <Filter className="h-5 w-5 text-red-600 mr-2" />
-          <h3 className="text-lg font-medium text-red-800">Filtres</h3>
+          <Filter className="h-5 w-5 text-red-600 mr-2 flex-shrink-0" />
+          <h3 className="text-base sm:text-lg font-medium text-red-800 truncate">Filtres</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {/* Filtre date début */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Date début:</label>
+          <div className="space-y-1 sm:space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">Date début:</label>
             <div className="flex items-center">
-              <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+              <Calendar className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
               <input
                 type="date"
                 value={format(dateDebut, 'yyyy-MM-dd')}
@@ -295,10 +295,10 @@ export default function GestionDepensesPage() {
           </div>
           
           {/* Filtre date fin */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Date fin:</label>
+          <div className="space-y-1 sm:space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">Date fin:</label>
             <div className="flex items-center">
-              <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+              <Calendar className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
               <input
                 type="date"
                 value={format(dateFin, 'yyyy-MM-dd')}
@@ -309,8 +309,8 @@ export default function GestionDepensesPage() {
           </div>
           
           {/* Site (verrouillé pour le caissier) */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Site:</label>
+          <div className="space-y-1 sm:space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">Site:</label>
             <div className="flex items-center">
               <input
                 type="text"
@@ -322,12 +322,12 @@ export default function GestionDepensesPage() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {/* Type de dépense */}
-          <div className="space-y-2">
+          <div className="space-y-1 sm:space-y-2">
             <SelectList
               label="Type de dépense"
-              labelClassName="text-sm font-medium text-gray-700"
+              labelClassName="text-sm font-medium text-gray-700 block"
               items={typesDepense}
               value={selectedType}
               onChange={(value) => setSelectedType(value ? value.toString() : '')}
@@ -336,13 +336,13 @@ export default function GestionDepensesPage() {
               searchable={true}
             />
             {loadingTypes && (
-    <p className="text-xs text-orange-500">Chargement des types de dépense...</p>
-  )}
+              <p className="text-xs text-orange-500">Chargement des types de dépense...</p>
+            )}
           </div>
           
           {/* Recherche par description */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Recherche par description:</label>
+          <div className="space-y-1 sm:space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">Recherche par description:</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -350,14 +350,14 @@ export default function GestionDepensesPage() {
                 placeholder="Rechercher dans les descriptions..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 py-2 border border-gray-300 rounded-md w-full"
+                className="pl-10 py-2 border border-gray-300 rounded-md w-full text-sm"
               />
             </div>
           </div>
           
           {/* Recherche par agent */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Recherche par agent:</label>
+          <div className="space-y-1 sm:space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">Recherche par agent:</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -365,17 +365,17 @@ export default function GestionDepensesPage() {
                 placeholder="Rechercher un agent..."
                 value={searchAgent}
                 onChange={(e) => setSearchAgent(e.target.value)}
-                className="pl-10 py-2 border border-gray-300 rounded-md w-full"
+                className="pl-10 py-2 border border-gray-300 rounded-md w-full text-sm"
               />
             </div>
           </div>
         </div>
         
         {/* Boutons d'action */}
-        <div className="flex justify-end space-x-2">
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:space-x-2">
           <Button 
             onClick={handleApplyFilters}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -390,7 +390,7 @@ export default function GestionDepensesPage() {
           <Button 
             variant="outline" 
             onClick={handleResetFilters}
-            className="border-red-500 text-red-600 hover:bg-red-50"
+            className="border-red-500 text-red-600 hover:bg-red-50 w-full sm:w-auto"
             disabled={isLoading}
           >
             Réinitialiser
@@ -399,104 +399,162 @@ export default function GestionDepensesPage() {
       </div>
       
       {/* Cartes de statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <Card className="bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-gray-700">Nombre de dépenses</CardTitle>
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="pb-2 p-3 sm:p-4">
+            <CardTitle className="text-sm sm:text-base font-medium text-gray-700">Nombre de dépenses</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-red-600">{stats.totalDepenses}</p>
+          <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+            <p className="text-xl sm:text-2xl font-bold text-red-600">{stats.totalDepenses}</p>
           </CardContent>
         </Card>
         
-        <Card className="bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-gray-700">Montant total</CardTitle>
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="pb-2 p-3 sm:p-4">
+            <CardTitle className="text-sm sm:text-base font-medium text-gray-700">Montant total</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-red-600">{stats.montantTotal.toLocaleString()} FCFA</p>
+          <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+            <p className="text-xl sm:text-2xl font-bold text-red-600 break-words">{stats.montantTotal.toLocaleString()} FCFA</p>
           </CardContent>
         </Card>
       </div>
       
       {/* Tableau des dépenses */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center">
-          <ListFilter className="h-5 w-5 text-red-600 mr-2" />
-          <h3 className="text-lg font-medium text-gray-700">Liste des dépenses</h3>
+        <div className="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 flex items-center">
+          <ListFilter className="h-5 w-5 text-red-600 mr-2 flex-shrink-0" />
+          <h3 className="text-base sm:text-lg font-medium text-gray-700 truncate">Liste des dépenses</h3>
         </div>
         
         {isLoading ? (
-          <div className="flex justify-center items-center p-8">
-            <Loader2 className="h-8 w-8 text-red-600 animate-spin" />
-            <span className="ml-2 text-lg text-gray-600">Chargement des dépenses...</span>
+          <div className="flex justify-center items-center p-4 sm:p-8">
+            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 animate-spin" />
+            <span className="ml-2 text-base sm:text-lg text-gray-600">Chargement des dépenses...</span>
           </div>
         ) : depenses.length > 0 ? (
-          <div className="h-96 overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-white z-10">
-                <TableRow className="bg-gray-100">
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Montant</TableHead>
-                  <TableHead>Agent</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {depenses.map((depense) => (
-                  <TableRow key={depense.id_depense} className="hover:bg-gray-50">
-                    <TableCell className="whitespace-nowrap text-gray-700">
-                      {format(new Date(depense.date_op), 'dd/MM/yyyy', { locale: fr })}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-gray-700">
-                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
-                        {depense.nom_type}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-gray-700 max-w-xs truncate">
-                      <div className="flex items-center">
-                        <Receipt className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
-                        <span className="line-clamp-1">{depense.description}</span>
+          <>
+            {/* Table pour les écrans moyens et grands */}
+            <div className="hidden sm:block h-[calc(100vh-28rem)] overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white z-10">
+                  <TableRow className="bg-gray-100">
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Montant</TableHead>
+                    <TableHead>Agent</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {depenses.map((depense, index) => (
+                    <TableRow key={depense.id_depense} className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                      <TableCell className="whitespace-nowrap text-gray-700">
+                        {format(new Date(depense.date_op), 'dd/MM/yyyy', { locale: fr })}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-gray-700">
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {depense.nom_type}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-gray-700 max-w-xs truncate">
+                        <div className="flex items-center">
+                          <Receipt className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
+                          <span className="line-clamp-1">{depense.description}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-gray-700">
+                        {depense.montant.toLocaleString()} FCFA
+                      </TableCell>
+                      <TableCell className="text-gray-700">
+                        {depense.nom_agent}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditDepense(depense)}
+                            className="text-blue-600 hover:bg-blue-50 border-blue-200 h-8 w-8 p-0"
+                            title="Modifier"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteClick(depense)}
+                            disabled={user?.libelle_profil === "Caissier" }
+                            className="text-red-600 hover:bg-red-50 border-red-200 h-8 w-8 p-0"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Liste de cartes pour les petits écrans */}
+            <div className="block sm:hidden max-h-[calc(100vh-30rem)] overflow-y-auto">
+              <div className="divide-y divide-gray-200">
+                {depenses.map((depense, index) => (
+                  <div key={depense.id_depense} className={`p-3 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium inline-block mb-1">
+                          {depense.nom_type}
+                        </span>
+                        <div className="text-xs text-gray-500">
+                          {format(new Date(depense.date_op), 'dd/MM/yyyy', { locale: fr })}
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-gray-700">
-                      {depense.montant.toLocaleString()} FCFA
-                    </TableCell>
-                    <TableCell className="text-gray-700">
-                      {depense.nom_agent}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-center space-x-2">
+                      <div className="font-medium text-red-600">
+                        {depense.montant.toLocaleString()} FCFA
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start mb-2">
+                      <Receipt className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-gray-700 line-clamp-2">{depense.description}</p>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-600">
+                        Agent: {depense.nom_agent}
+                      </div>
+                      <div className="flex space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditDepense(depense)}
-                          className="text-blue-600 hover:bg-blue-50 border-blue-200 h-8 w-8 p-0"
+                          className="text-blue-600 hover:bg-blue-50 border-blue-200 h-7 w-7 p-0"
                           title="Modifier"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteClick(depense)}
                           disabled={user?.libelle_profil === "Caissier" }
-                          className="text-red-600 hover:bg-red-50 border-red-200 h-8 w-8 p-0"
+                          className="text-red-600 hover:bg-red-50 border-red-200 h-7 w-7 p-0"
                           title="Supprimer"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
+              </div>
+            </div>
+          </>
         ) : (
-          <div className="p-8 text-center">
+          <div className="p-4 sm:p-8 text-center">
             <p className="text-gray-500">Aucune dépense trouvée avec les critères sélectionnés.</p>
           </div>
         )}
@@ -535,26 +593,28 @@ export default function GestionDepensesPage() {
       
       {/* Dialog de confirmation de suppression */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95%] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-red-600">Confirmer la suppression</DialogTitle>
             <DialogDescription>
               Êtes-vous sûr de vouloir supprimer cette dépense ? Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="sm:justify-end">
+          <DialogFooter className="flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-2">
             <Button
               variant="outline"
               onClick={() => {
                 setShowDeleteDialog(false);
                 setSelectedDepense(null);
               }}
+              className="w-full sm:w-auto"
             >
               Annuler
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteDepense}
+              className="w-full sm:w-auto"
             >
               Supprimer
             </Button>
