@@ -23,6 +23,7 @@ interface ArticleVenteModalCaisseProps {
     pu_boutique: number;
     pu_livreur: number;
     pu_revente: number;
+    puLibre: number;
   };
   onValiderArticle: (venteDetail: ArticleVenteDetail) => void;
   onClose: () => void;
@@ -49,8 +50,9 @@ export default function ArticleVenteModalCaisse({
 }: ArticleVenteModalCaisseProps) {
   // États pour les détails de l'article
   const [quantite, setQuantite] = useState<number>(1);
-  const [typePrix, setTypePrix] = useState<PrixOption>(1); // 1 = boutique, 2 = livreur, 3 = revente
+  const [typePrix, setTypePrix] = useState<PrixOption>(1); // 1 = boutique, 2 = livreur, 3 = revente, 4 = prix libre
   const [prixUnitaire, setPrixUnitaire] = useState<number>(article.pu_boutique);
+ 
   const [montantLigne, setMontantLigne] = useState<number>(article.pu_boutique);
   const [montantEncaisse, setMontantEncaisse] = useState<number>(article.pu_boutique);
   const [selectedClient, setSelectedClient] = useState<number | null>(null);
@@ -71,6 +73,10 @@ export default function ArticleVenteModalCaisse({
         break;
       case 3:
         setPrixUnitaire(article.pu_revente);
+        break;
+      case 4:
+        // Pour prix libre, utiliser une valeur par défaut de 0 si puLibre est undefined ou NaN
+        setPrixUnitaire(article.puLibre || 0);
         break;
       default:
         setPrixUnitaire(article.pu_boutique);
@@ -165,6 +171,17 @@ export default function ArticleVenteModalCaisse({
                 />
                 <Label htmlFor="prix-revente">Revente ({article.pu_revente.toLocaleString()} FCFA)</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <input 
+                  type="radio" 
+                  id="prix-libre" 
+                  name="typePrix" 
+                  value="4" 
+                  checked={typePrix === 4} 
+                  onChange={() => setTypePrix(4)} 
+                />
+                <Label htmlFor="prix-libre">Prix libre</Label>
+              </div>
             </div>
           </div>
           
@@ -183,7 +200,19 @@ export default function ArticleVenteModalCaisse({
               <p className="text-red-500 text-sm">La quantité dépasse le stock disponible!</p>
             )}
           </div>
-          
+          {/* Prix unitaire - visible uniquement pour prix libre */}
+              {typePrix === 4 && (
+                <div className="space-y-2">
+                  <Label htmlFor="prixUnitaire">Prix unitaire</Label>
+                  <Input 
+                    id="prixUnitaire"
+                    type="number"
+                    min="0"
+                    value={prixUnitaire}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrixUnitaire(Number(e.target.value))}
+                  />
+                </div>
+              )}
           {/* Montant et Montant encaissé côte à côte */}
           <div className="grid grid-cols-2 gap-4">
             {/* Montant */}

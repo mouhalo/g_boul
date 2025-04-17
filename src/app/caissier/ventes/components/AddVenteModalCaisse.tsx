@@ -37,6 +37,7 @@ export interface ArticlePossible {
   pu_boutique: number;
   pu_livreur: number;
   pu_revente: number;
+  puLibre: number;
   type_prix?: number;
 }
 
@@ -211,25 +212,32 @@ export default function AddVenteModalCaisse({
     setVenteDetails(newDetails);
   };
 
-  // Fonction pour mettre à jour un détail de vente
   const handleUpdateDetail = (index: number, field: string, value: unknown): void => {
     const updatedDetails = [...venteDetails];
     
     // Mise à jour du champ spécifié
     if (field === 'qte') {
-      const qte = parseFloat(value as string);
+      const qte = parseFloat(value as string) || 0; // Éviter NaN avec || 0
       updatedDetails[index].qte = qte;
-      updatedDetails[index].mt_ligne = qte * updatedDetails[index].pu;
-      updatedDetails[index].mt_encaisse = qte * updatedDetails[index].pu; // Mettre à jour le montant encaissé également
+      updatedDetails[index].mt_ligne = qte * (updatedDetails[index].pu || 0);
+      updatedDetails[index].mt_encaisse = qte * (updatedDetails[index].pu || 0);
     } else if (field === 'pu') {
-      const pu = parseFloat(value as string);
+      const pu = parseFloat(value as string) || 0; // Éviter NaN avec || 0
       updatedDetails[index].pu = pu;
       updatedDetails[index].mt_ligne = updatedDetails[index].qte * pu;
-      updatedDetails[index].mt_encaisse = updatedDetails[index].qte * pu; // Mettre à jour le montant encaissé également
+      updatedDetails[index].mt_encaisse = updatedDetails[index].qte * pu;
     } else if (field === 'mt_encaisse') {
-      updatedDetails[index].mt_encaisse = parseFloat(value as string);
+      updatedDetails[index].mt_encaisse = parseFloat(value as string) || 0; // Éviter NaN avec || 0
     } else if (field === 'type_prix') {
       updatedDetails[index].type_prix = Number(value) as PrixOption;
+      
+      // Si le type de prix est modifié après l'ajout, mettre à jour le prix unitaire en conséquence
+      if (updatedDetails[index].type_prix === 4) {
+        // Si c'est un prix libre et que le prix est à 0, ne pas le réinitialiser
+        if (updatedDetails[index].pu === 0) {
+          // Garder le prix à 0 ou définir un prix par défaut si nécessaire
+        }
+      }
     } else {
       // @ts-expect-error - Champ dynamique
       updatedDetails[index][field] = value;
@@ -237,7 +245,6 @@ export default function AddVenteModalCaisse({
     
     setVenteDetails(updatedDetails);
   };
-
   // Sauvegarder la vente
   const handleSaveVente = async (): Promise<void> => {
     if (venteDetails.length === 0) {
