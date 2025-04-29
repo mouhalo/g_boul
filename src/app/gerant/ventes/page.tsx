@@ -13,12 +13,13 @@ import VisuelVenteModal from '@/app/gerant/ventes/VisuelVenteModal';
 import { format } from 'date-fns';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ShoppingBag, Package, BarChart, Loader2 } from 'lucide-react';
+import { Plus, ShoppingBag, Package, BarChart, Loader2, TrendingUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter,DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Importation des composants pour chaque onglet
 import SuiviVentesTab from '@/app/gerant/ventes/components/SuiviVentesTab';
 import ArticlesVendusTab from '@/app/gerant/ventes/components/ArticlesVendusTab';
+import VueEncaissementCaisse from '@/app/gerant/ventes/components/VueEncaissementCaisse';
 import PageConstruction from '@/app/components/PageConstruction';
 
 // Types
@@ -44,7 +45,6 @@ export default function GestionVentesPage() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [dateFin, setDateFin] = useState<Date>(new Date());
-
 
   // États pour l'onglet "Suivi ventes"
   const [showAddModal, setShowAddModal] = useState(false);
@@ -492,7 +492,7 @@ useEffect(() => {
   };
 
   // Préparation des options de filtre à passer aux composants enfants
-  const filterOptions: FilterOptions = {
+  const updatedFilterOptions: FilterOptions = {
     dateDebut,
     dateFin,
     setDateDebut,
@@ -540,7 +540,7 @@ useEffect(() => {
   return (
     <div className="container mx-auto p-4">
       {/* En-tête avec titre et bouton d'ajout */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-10 mt-8">
         <h1 className="text-2xl font-bold text-red-700">Gestion des Ventes</h1>
         <Button 
           onClick={() => {
@@ -555,66 +555,76 @@ useEffect(() => {
 
       {/* Onglets */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="ventes" className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4" /> Suivi ventes
           </TabsTrigger>
           <TabsTrigger value="articles" className="flex items-center gap-2">
             <Package className="h-4 w-4" /> Articles vendus
           </TabsTrigger>
-          <TabsTrigger value="rendement" className="flex items-center gap-2">
-            <BarChart className="h-4 w-4" /> Rendement
+          <TabsTrigger value="encaissements" className="flex items-center gap-2">
+            <BarChart className="h-4 w-4" /> Encaissements
+          </TabsTrigger>
+          <TabsTrigger value="rendements" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" /> Rendements
           </TabsTrigger>
         </TabsList>
 
         {/* Contenu de l'onglet "Suivi ventes" */}
-        {/* Contenu de l'onglet "Suivi ventes" */}
-<TabsContent value="ventes" className="mt-4">
-  {isLoading ? (
-    <div className="flex justify-center items-center p-8">
-      <Loader2 className="h-8 w-8 text-red-600 animate-spin" />
-      <span className="ml-2 text-lg text-gray-600">Chargement des ventes...</span>
-    </div>
-  ) : (
-    <SuiviVentesTab 
-      isLoading={isLoading}
-      filterOptions={filterOptions}
-      ventes={ventePagination.items as Vente[]}
-      globalTotals={globalTotals}
-      pagination={{
-        ...ventePagination,
-        startIndex: ventePaginationInfo.startIndex, 
-        endIndex: ventePaginationInfo.endIndex,
-        paginationInfo: ventePaginationInfo,
-        items: ventePagination.items as Vente[]
-      }}
-      user={user || { libelle_profil: '', id_agent: 0 }}
-      onViewDetails={handleViewDetails}
-      onDeleteClick={(vente: Vente) => {
-        setSelectedVente(vente);
-        setShowDeleteDialog(true);
-      }}
-    />
-  )}
-</TabsContent>
+        <TabsContent value="ventes" className="mt-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 text-red-600 animate-spin" />
+              <span className="ml-2 text-lg text-gray-600">Chargement des ventes...</span>
+            </div>
+          ) : (
+            <SuiviVentesTab 
+              isLoading={isLoading}
+              filterOptions={updatedFilterOptions}
+              ventes={ventePagination.items as Vente[]}
+              globalTotals={globalTotals}
+              pagination={{
+                ...ventePagination,
+                startIndex: ventePaginationInfo.startIndex, 
+                endIndex: ventePaginationInfo.endIndex,
+                paginationInfo: ventePaginationInfo,
+                items: ventePagination.items as Vente[]
+              }}
+              user={user || { libelle_profil: '', id_agent: 0 }}
+              onViewDetails={handleViewDetails}
+              onDeleteClick={(vente: Vente) => {
+                setSelectedVente(vente);
+                setShowDeleteDialog(true);
+              }}
+            />
+          )}
+        </TabsContent>
 
         {/* Contenu de l'onglet "Articles vendus" */}
         <TabsContent value="articles" className="mt-4">
           <ArticlesVendusTab 
             isLoading={isLoadingDetails}
-            filterOptions={filterOptions}
+            filterOptions={updatedFilterOptions}
             articlesVendus={articlesVendus}
             articlesStats={articlesStats}
             detailActions={detailActions}
           />
         </TabsContent>
 
-        {/* Contenu de l'onglet "Rendement" */}
-        <TabsContent value="rendement" className="mt-4">
+        {/* Contenu de l'onglet "Encaissements" */}
+        <TabsContent value="encaissements" className="mt-4">
+          <VueEncaissementCaisse 
+            isLoading={isLoading}
+            filterOptions={updatedFilterOptions}
+          />
+        </TabsContent>
+
+        {/* Contenu de l'onglet "Rendements" */}
+        <TabsContent value="rendements" className="mt-4">
           <PageConstruction 
             title="Page en construction"
             message="Cette fonctionnalité sera bientôt disponible. Revenez prochainement pour visualiser les statistiques de rendement."
-            icon={<BarChart className="h-24 w-24 text-gray-300" />}
+            icon={<TrendingUp className="h-24 w-24 text-gray-300" />}
             buttonText="Revenir à la page des ventes"
             buttonAction={() => setActiveTab('ventes')}
           />

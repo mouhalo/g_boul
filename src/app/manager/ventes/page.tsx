@@ -13,12 +13,13 @@ import VisuelVenteModal from '@/app/manager/ventes/VisuelVenteModal';
 import { format } from 'date-fns';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ShoppingBag, Package, BarChart, Loader2 } from 'lucide-react';
+import { Plus, ShoppingBag, Package, BarChart, Loader2, TrendingUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter,DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Importation des composants pour chaque onglet
 import SuiviVentesTab from '@/app/manager/ventes/components/SuiviVentesTab';
 import ArticlesVendusTab from '@/app/manager/ventes/components/ArticlesVendusTab';
+import VueEncaissementCaisse from '@/app/manager/ventes/components/VueEncaissementCaisse';
 import PageConstruction from '@/app/components/PageConstruction';
 
 // Types
@@ -28,7 +29,7 @@ import {
   FilterOptions
 } from './types';
 
-export default function GestionVentesPage() {
+ export default function GestionVentesPage() {
   const { toast } = useToast();
   const { user } = useContext(UserContext);
   const { params: siteParams } = useContext(ParamsContext);
@@ -45,6 +46,30 @@ export default function GestionVentesPage() {
   });
   const [dateFin, setDateFin] = useState<Date>(new Date());
 
+  // Création des options de filtres pour les composants enfants
+  const filterOptions: FilterOptions = {
+    dateDebut,
+    dateFin,
+    setDateDebut,
+    setDateFin,
+    selectedSite: '',
+    setSelectedSite: () => {},
+    selectedTypeVente: '',
+    setSelectedTypeVente: () => {},
+    selectedAgent: '',
+    setSelectedAgent: () => {},
+    selectedArticle: '',
+    setSelectedArticle: () => {},
+    selectedClient: '',
+    setSelectedClient: () => {},
+    availableTypes: [],
+    availableArticles: [],
+    availableAgents: [],
+    availableClients: [],
+    siteParams,
+    applyFilters: () => {},
+    resetFilters: () => {}
+  };
 
   // États pour l'onglet "Suivi ventes"
   const [showAddModal, setShowAddModal] = useState(false);
@@ -76,10 +101,6 @@ export default function GestionVentesPage() {
     startIndex: ventePagination.offset,
     endIndex: Math.min((ventePagination.currentPage * ventePagination.limit) - 1, ventePagination.totalItems - 1)
   };
-
-
-
-
 
   // Chargement des ventes (avec filtres et pagination)
   const loadVentes = useCallback(async () => {
@@ -493,29 +514,22 @@ useEffect(() => {
   };
 
   // Préparation des options de filtre à passer aux composants enfants
-  const filterOptions: FilterOptions = {
-    dateDebut,
-    dateFin,
-    setDateDebut,
-    setDateFin,
-    selectedSite,
-    setSelectedSite,
-    selectedTypeVente, 
-    setSelectedTypeVente,
-    selectedAgent,
-    setSelectedAgent,
-    selectedArticle, 
-    setSelectedArticle,
-    selectedClient,
-    setSelectedClient,
-    availableTypes,
-    availableArticles,
-    availableAgents,
-    availableClients,
-    siteParams,
-    applyFilters,
-    resetFilters
-  };
+  filterOptions.selectedSite = selectedSite;
+  filterOptions.setSelectedSite = setSelectedSite;
+  filterOptions.selectedTypeVente = selectedTypeVente;
+  filterOptions.setSelectedTypeVente = setSelectedTypeVente;
+  filterOptions.selectedAgent = selectedAgent;
+  filterOptions.setSelectedAgent = setSelectedAgent;
+  filterOptions.selectedArticle = selectedArticle;
+  filterOptions.setSelectedArticle = setSelectedArticle;
+  filterOptions.selectedClient = selectedClient;
+  filterOptions.setSelectedClient = setSelectedClient;
+  filterOptions.availableTypes = availableTypes;
+  filterOptions.availableArticles = availableArticles;
+  filterOptions.availableAgents = availableAgents;
+  filterOptions.availableClients = availableClients;
+  filterOptions.applyFilters = applyFilters;
+  filterOptions.resetFilters = resetFilters;
 
   // Fonctions pour les actions sur les ventes
   const handleViewDetails = (vente: Vente) => {
@@ -554,48 +568,50 @@ useEffect(() => {
 
       {/* Onglets */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="ventes" className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4" /> Suivi ventes
           </TabsTrigger>
           <TabsTrigger value="articles" className="flex items-center gap-2">
             <Package className="h-4 w-4" /> Articles vendus
           </TabsTrigger>
-          <TabsTrigger value="rendement" className="flex items-center gap-2">
-            <BarChart className="h-4 w-4" /> Rendement
+          <TabsTrigger value="encaissements" className="flex items-center gap-2">
+            <BarChart className="h-4 w-4" /> Encaissements
+          </TabsTrigger>
+          <TabsTrigger value="rendements" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" /> Rendements
           </TabsTrigger>
         </TabsList>
 
         {/* Contenu de l'onglet "Suivi ventes" */}
-        {/* Contenu de l'onglet "Suivi ventes" */}
-<TabsContent value="ventes" className="mt-4">
-  {isLoading ? (
-    <div className="flex justify-center items-center p-8">
-      <Loader2 className="h-8 w-8 text-red-600 animate-spin" />
-      <span className="ml-2 text-lg text-gray-600">Chargement des ventes...</span>
-    </div>
-  ) : (
-    <SuiviVentesTab 
-      isLoading={isLoading}
-      filterOptions={filterOptions}
-      ventes={ventePagination.items as Vente[]}
-      globalTotals={globalTotals}
-      pagination={{
-        ...ventePagination,
-        startIndex: ventePaginationInfo.startIndex, 
-        endIndex: ventePaginationInfo.endIndex,
-        paginationInfo: ventePaginationInfo,
-        items: ventePagination.items as Vente[]
-      }}
-      user={user || { libelle_profil: '', id_agent: 0 }}
-      onViewDetails={handleViewDetails}
-      onDeleteClick={(vente: Vente) => {
-        setSelectedVente(vente);
-        setShowDeleteDialog(true);
-      }}
-    />
-  )}
-</TabsContent>
+        <TabsContent value="ventes" className="mt-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 text-red-600 animate-spin" />
+              <span className="ml-2 text-lg text-gray-600">Chargement des ventes...</span>
+            </div>
+          ) : (
+            <SuiviVentesTab 
+              isLoading={isLoading}
+              filterOptions={filterOptions}
+              ventes={ventePagination.items as Vente[]}
+              globalTotals={globalTotals}
+              pagination={{
+                ...ventePagination,
+                startIndex: ventePaginationInfo.startIndex, 
+                endIndex: ventePaginationInfo.endIndex,
+                paginationInfo: ventePaginationInfo,
+                items: ventePagination.items as Vente[]
+              }}
+              user={user || { libelle_profil: '', id_agent: 0 }}
+              onViewDetails={handleViewDetails}
+              onDeleteClick={(vente: Vente) => {
+                setSelectedVente(vente);
+                setShowDeleteDialog(true);
+              }}
+            />
+          )}
+        </TabsContent>
 
         {/* Contenu de l'onglet "Articles vendus" */}
         <TabsContent value="articles" className="mt-4">
@@ -608,12 +624,20 @@ useEffect(() => {
           />
         </TabsContent>
 
-        {/* Contenu de l'onglet "Rendement" */}
-        <TabsContent value="rendement" className="mt-4">
+        {/* Contenu de l'onglet "Encaissements" */}
+        <TabsContent value="encaissements" className="mt-4">
+          <VueEncaissementCaisse
+            isLoading={isLoading}
+            filterOptions={filterOptions}
+          />
+        </TabsContent>
+
+        {/* Contenu de l'onglet "Rendements" */}
+        <TabsContent value="rendements" className="mt-4">
           <PageConstruction 
             title="Page en construction"
             message="Cette fonctionnalité sera bientôt disponible. Revenez prochainement pour visualiser les statistiques de rendement."
-            icon={<BarChart className="h-24 w-24 text-gray-300" />}
+            icon={<TrendingUp className="h-24 w-24 text-gray-300" />}
             buttonText="Revenir à la page des ventes"
             buttonAction={() => setActiveTab('ventes')}
           />
