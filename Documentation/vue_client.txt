@@ -1,0 +1,519 @@
+-- Vue de la situation des comptes clients
+CREATE OR REPLACE VIEW vue_situation_compte_clients AS
+WITH soldes_clients AS (
+-- Calcul des totaux par client
+SELECT
+    jc.id_acteur AS id_client,
+    SUM(jc.mt_credit) AS total_achats,
+    SUM(jc.mt_debit) AS total_paiements,
+    SUM(jc.mt_credit) - SUM(jc.mt_debit) AS solde
+FROM journal_compte jc
+WHERE jc.type_acteur = 'C' -- Uniquement les clients
+GROUP BY jc.id_acteur
+),
+dernier_mouvement AS (
+-- Récupère la date du dernier mouvement pour chaque client
+SELECT
+    jc.id_acteur AS id_client,
+    MAX(jc.date_mouv) AS derniere_activite
+FROM journal_compte jc
+WHERE jc.type_acteur = 'C'
+GROUP BY jc.id_acteur
+),
+stats_mensuelles AS (
+-- Calcul des statistiques d'achat mensuelles
+SELECT
+    jc.id_acteur AS id_client,
+    TO_CHAR(jc.date_mouv, 'YYYY-MM') AS mois,
+    SUM(jc.mt_credit) AS achats_mois
+FROM journal_compte jc
+WHERE jc.type_acteur = 'C'
+GROUP BY jc.id_acteur, TO_CHAR(jc.date_mouv, 'YYYY-MM')
+),
+moyenne_mensuelle AS (
+-- Calcul de la moyenne mensuelle des achats
+SELECT
+    id_client,
+    AVG(achats_mois) AS moyenne_achats_mensuel
+FROM stats_mensuelles
+GROUP BY id_client
+)
+
+-- Requête principale
+SELECT
+    c.id_client,
+    c.nom_client,
+    COALESCE(s.total_achats, 0) AS total_achats,
+    COALESCE(s.total_paiements, 0) AS total_paiements,
+    COALESCE(s.solde, 0) AS solde,
+    CASE
+        WHEN COALESCE(s.solde, 0) > 0 THEN 'Débiteur' -- Le client nous doit de l'argent
+        WHEN COALESCE(s.solde, 0) < 0 THEN 'Créditeur' -- Nous devons de l'argent au client
+        ELSE 'Équilibré'
+    END AS statut_compte,
+    d.derniere_activite,
+    CURRENT_DATE - d.derniere_activite AS jours_depuis_derniere_activite,
+    COALESCE(m.moyenne_achats_mensuel, 0) AS moyenne_achats_mensuel,
+    -- Calcul du ratio de paiement - Correction ici
+    CASE
+        WHEN COALESCE(s.total_achats, 0) = 0 THEN 100.0 -- Pour éviter division par zéro
+        ELSE TRUNC((COALESCE(s.total_paiements, 0) / COALESCE(s.total_achats, 0)) * 100 * 100) / 100.0
+    END AS ratio_paiement,
+    -- Classement clients
+    CASE
+        WHEN COALESCE(s.total_achats, 0) > 500000 THEN 'Premium'
+        WHEN COALESCE(s.total_achats, 0) > 100000 THEN 'Gold'
+        WHEN COALESCE(s.total_achats, 0) > 50000 THEN 'Silver'
+        ELSE 'Standard'
+    END AS categorie_client
+FROM client c
+LEFT JOIN soldes_clients s ON c.id_client = s.id_client
+LEFT JOIN dernier_mouvement d ON c.id_client = d.id_client
+LEFT JOIN moyenne_mensuelle m ON c.id_client = m.id_client
+WHERE c.id_client > 0 -- Exclure les clients systèmes (comme id_client = 0)
+ORDER BY ABS(COALESCE(s.solde, 0)) DESC;
+
+-- Vue pour l'historique des transactions par client
+CREATE OR REPLACE VIEW vue_historique_transactions_client AS
+SELECT 
+    jc.id_compte,
+    jc.id_acteur AS id_client,
+    c.nom_client,
+    jc.date_mouv,
+    jc.description,
+    jc.mt_credit AS achats,
+    jc.mt_debit AS paiements,
+    jc.mt_credit - jc.mt_debit AS impact_solde,
+    jc.id_site,
+    s.nom_site
+FROM journal_compte jc
+JOIN client c ON jc.id_acteur = c.id_client
+LEFT JOIN site s ON jc.id_site = s.id_site
+WHERE jc.type_acteur = 'C'
+ORDER BY jc.date_mouv DESC, jc.id_compte;
+
+-- Vue pour les encaissements et achats par période
+CREATE OR REPLACE VIEW vue_encaissements_par_periode AS
+SELECT 
+    TO_CHAR(jc.date_mouv, 'YYYY-MM') AS mois,
+    jc.id_acteur AS id_client,
+    c.nom_client,
+    SUM(jc.mt_credit) AS total_achats,
+    SUM(jc.mt_debit) AS total_paiements,
+    SUM(jc.mt_credit) - SUM(jc.mt_debit) AS balance_periode
+FROM journal_compte jc
+JOIN client c ON jc.id_acteur = c.id_client
+WHERE jc.type_acteur = 'C'
+GROUP BY TO_CHAR(jc.date_mouv, 'YYYY-MM'), jc.id_acteur, c.nom_client
+ORDER BY TO_CHAR(jc.date_mouv, 'YYYY-MM') DESC, SUM(jc.mt_credit) DESC;
+
+
+-- DROP FUNCTION public.regulariser_comptes_clients_v2(int4, int4, date, date, int4, int4, bool);
+
+CREATE OR REPLACE FUNCTION public.regulariser_comptes_clients_v2(p_id_vente integer DEFAULT NULL::integer, p_id_client integer DEFAULT NULL::integer, p_date_min date DEFAULT NULL::date, p_date_max date DEFAULT NULL::date, p_id_site integer DEFAULT NULL::integer, p_id_boul integer DEFAULT NULL::integer, p_debug boolean DEFAULT true)
+ RETURNS TABLE(operation text, vente_id integer, client_id integer, client_nom text, total_achats numeric, total_encaisse numeric, statut text)
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_start_time TIMESTAMP;
+    v_vente RECORD;
+    v_client RECORD;
+    v_detail RECORD;
+    v_caisse RECORD;
+    v_achats NUMERIC(15,2);
+    v_encaisse NUMERIC(15,2);
+    v_periode VARCHAR(7);
+    v_journal_existe BOOLEAN;
+    v_clients_count INTEGER := 0;
+    v_client_details RECORD;
+    v_total_credit NUMERIC(15,2);
+    v_total_debit NUMERIC(15,2);
+    v_nom_client TEXT;
+    v_id_journal INTEGER;
+    v_total_facture NUMERIC(15,2);
+    v_total_caisse NUMERIC(15,2);
+BEGIN
+    v_start_time := clock_timestamp();
+    
+    -- Log de démarrage
+    IF p_debug THEN 
+        RAISE NOTICE '====== DÉBUT RÉGULARISATION DES COMPTES CLIENTS - % ======', v_start_time;
+        RAISE NOTICE 'Paramètres: Vente=%, Client=%, Période=%→%, Site=%, Boulangerie=%', 
+            COALESCE(p_id_vente::TEXT, 'TOUS'), 
+            COALESCE(p_id_client::TEXT, 'TOUS'),
+            COALESCE(p_date_min::TEXT, 'DÉBUT'),
+            COALESCE(p_date_max::TEXT, 'FIN'),
+            COALESCE(p_id_site::TEXT, 'TOUS'),
+            COALESCE(p_id_boul::TEXT, 'TOUS');
+    END IF;
+
+    -- Trouver toutes les ventes qui correspondent aux critères
+    FOR v_vente IN (
+        SELECT 
+            v.id_vente, 
+            v.id_boul, 
+            v.id_site, 
+            v.date_vente, 
+            v.id_agent,
+            v.montant AS montant_initial,
+            v.montant_encaisse AS encaisse_initial
+        FROM vente v
+        WHERE (p_id_vente IS NULL OR v.id_vente = p_id_vente)
+        AND (p_date_min IS NULL OR v.date_vente >= p_date_min)
+        AND (p_date_max IS NULL OR v.date_vente <= p_date_max)
+        AND (p_id_site IS NULL OR v.id_site = p_id_site)
+        AND (p_id_boul IS NULL OR v.id_boul = p_id_boul)
+        AND EXISTS (
+            SELECT 1 FROM detail_vente dv 
+            WHERE dv.id_vente = v.id_vente
+            AND (p_id_client IS NULL OR dv.id_client = p_id_client)
+            AND dv.id_client <> 30
+            AND dv.id_client > 0
+        )
+        ORDER BY v.id_vente
+    ) LOOP
+        -- Log début de traitement de vente
+        IF p_debug THEN
+            RAISE NOTICE '------------------------------------------------------';
+            RAISE NOTICE 'TRAITEMENT VENTE #% (Boul: %, Site: %, Date: %)',
+                v_vente.id_vente, v_vente.id_boul, v_vente.id_site, v_vente.date_vente;
+        END IF;
+        
+        -- Initialisation des totaux pour cette vente
+        v_total_facture := 0;
+        v_total_caisse := 0;
+        
+        -- Trouver tous les clients concernés par cette vente (qui ont des achats réels)
+        FOR v_client IN (
+            SELECT DISTINCT 
+                dv.id_client, 
+                c.nom_client
+            FROM detail_vente dv
+            LEFT JOIN client c ON c.id_client = dv.id_client
+            WHERE dv.id_vente = v_vente.id_vente
+            AND dv.id_client <> 30
+            AND dv.id_client > 0
+            AND (p_id_client IS NULL OR dv.id_client = p_id_client)
+            ORDER BY dv.id_client
+        ) LOOP
+            v_nom_client := COALESCE(v_client.nom_client, 'INCONNU');
+            v_clients_count := v_clients_count + 1;
+            
+            -- Log début de traitement du client
+            IF p_debug THEN
+                RAISE NOTICE '  > CLIENT #% (%): Traitement en cours...', 
+                    v_client.id_client, v_nom_client;
+            END IF;
+            
+            -- 1. Calculer le total des achats pour ce client et cette vente
+            SELECT COALESCE(SUM(dv.qte * dv.pu), 0) INTO v_achats
+            FROM detail_vente dv
+            WHERE dv.id_vente = v_vente.id_vente
+            AND dv.id_client = v_client.id_client
+            AND dv.id_type <> 44; -- Exclure les invendus
+            
+            -- 2. Calculer le total des encaissements dans detail_vente pour ce client/vente
+            SELECT COALESCE(SUM(dv.mt_encaisse), 0) INTO v_encaisse
+            FROM detail_vente dv
+            WHERE dv.id_vente = v_vente.id_vente
+            AND dv.id_client = v_client.id_client
+            AND dv.id_type <> 44; -- Exclure les invendus
+            
+            -- Log des montants calculés
+            IF p_debug THEN
+                RAISE NOTICE '    * Total des achats (detail_vente) : %', v_achats;
+                RAISE NOTICE '    * Total encaissé (detail_vente) : %', v_encaisse;
+                
+                -- Détailler les lignes de vente
+                FOR v_detail IN (
+                    SELECT 
+                        id_detail, 
+                        id_article, 
+                        qte, 
+                        pu, 
+                        qte * pu AS montant, 
+                        mt_encaisse,
+                        id_type
+                    FROM detail_vente
+                    WHERE id_vente = v_vente.id_vente
+                    AND id_client = v_client.id_client
+                    ORDER BY id_detail
+                ) LOOP
+                    RAISE NOTICE '      - Detail #%: Art.% | Qté:% × PU:% = % | Encaissé:% | Type:%',
+                        v_detail.id_detail, v_detail.id_article, v_detail.qte,
+                        v_detail.pu, v_detail.montant, v_detail.mt_encaisse,
+                        v_detail.id_type;
+                END LOOP;
+            END IF;
+            
+            -- Incrementer les totaux pour la vente
+            v_total_facture := v_total_facture + v_achats;
+            v_total_caisse := v_total_caisse + v_encaisse;
+            
+            -- 3. Vérifier et mettre à jour les encaissements dans la table caisse
+            -- Calculer le total des encaissements dans caisse
+            SELECT COALESCE(SUM(c.montant_encaisse), 0) INTO v_total_debit
+            FROM caisse c
+            WHERE c.id_vente = v_vente.id_vente
+            AND c.id_client = v_client.id_client;
+            
+            -- Log des encaissements existants
+            IF p_debug THEN
+                RAISE NOTICE '    * Total encaissé (caisse) : %', v_total_debit;
+                
+                -- Détailler les encaissements existants
+                FOR v_caisse IN (
+                    SELECT 
+                        id_caisse, 
+                        date_encaisse, 
+                        montant_encaisse
+                    FROM caisse
+                    WHERE id_vente = v_vente.id_vente
+                    AND id_client = v_client.id_client
+                    ORDER BY date_encaisse, id_caisse
+                ) LOOP
+                    RAISE NOTICE '      - Caisse #%: % | %',
+                        v_caisse.id_caisse, v_caisse.date_encaisse, v_caisse.montant_encaisse;
+                END LOOP;
+            END IF;
+            
+            -- Vérifier si les montants encaissés correspondent entre detail_vente et caisse
+            IF v_encaisse <> v_total_debit THEN
+                IF p_debug THEN
+                    RAISE NOTICE '    ! INCOHÉRENCE DÉTECTÉE: Encaissements caisse (%) ≠ encaissements detail_vente (%)',
+                        v_total_debit, v_encaisse;
+                END IF;
+                
+                -- Réinitialiser les encaissements dans caisse pour ce client/vente
+                DELETE FROM caisse
+                WHERE id_vente = v_vente.id_vente
+                AND id_client = v_client.id_client;
+                
+                -- Ne créer un nouvel encaissement que si le montant est > 0
+                IF v_encaisse > 0 THEN
+                    INSERT INTO caisse (
+                        id_boul, 
+                        id_site, 
+                        date_encaisse, 
+                        montant_encaisse, 
+                        id_agent, 
+                        id_vente, 
+                        id_client
+                    ) VALUES (
+                        v_vente.id_boul, 
+                        v_vente.id_site, 
+                        v_vente.date_vente, 
+                        v_encaisse, 
+                        v_vente.id_agent, 
+                        v_vente.id_vente, 
+                        v_client.id_client
+                    );
+                    
+                    IF p_debug THEN
+                        RAISE NOTICE '    ✓ Encaissement corrigé: nouveau montant = %', v_encaisse;
+                    END IF;
+                    
+                    operation := 'CAISSE_CORRIGÉE';
+                    statut := format('Encaissement corrigé de %s → %s', v_total_debit, v_encaisse);
+                ELSE
+                    IF p_debug THEN
+                        RAISE NOTICE '    ✓ Encaissements supprimés (montant = 0)';
+                    END IF;
+                    
+                    operation := 'CAISSE_SUPPRIMÉE';
+                    statut := 'Encaissements supprimés (montant = 0)';
+                END IF;
+                
+                -- Mettre à jour le débit pour refléter le nouvel état
+                v_total_debit := v_encaisse;
+            ELSE
+                operation := 'CAISSE_OK';
+                statut := format('Encaissements déjà corrects: %s', v_encaisse);
+                
+                IF p_debug THEN
+                    RAISE NOTICE '    ✓ Encaissements corrects';
+                END IF;
+            END IF;
+            
+            -- 4. Vérifier et mettre à jour le journal comptable
+            -- Vérifier si une entrée existe déjà dans journal_compte pour ce client/vente
+            SELECT INTO v_id_journal, v_total_credit, v_total_debit
+                id_compte, mt_credit, mt_debit
+            FROM journal_compte
+            WHERE id_vente = v_vente.id_vente
+            AND id_acteur = v_client.id_client
+            AND type_acteur = 'C'
+            AND id_site = v_vente.id_site
+            AND id_boul = v_vente.id_boul;
+            
+            v_journal_existe := FOUND;
+            
+            -- Log de l'état du journal
+            IF p_debug THEN
+                IF v_journal_existe THEN
+                    RAISE NOTICE '    * Journal existant: ID=% | Crédit=% | Débit=%',
+                        v_id_journal, v_total_credit, v_total_debit;
+                ELSE
+                    RAISE NOTICE '    * Journal inexistant pour ce client/vente';
+                END IF;
+            END IF;
+            
+            -- Mettre à jour ou créer l'entrée du journal
+            IF v_journal_existe THEN
+                -- Mettre à jour si les montants sont différents
+                IF v_total_credit <> v_achats OR v_total_debit <> v_encaisse THEN
+                    UPDATE journal_compte
+                    SET 
+                        mt_credit = v_achats,
+                        mt_debit = v_encaisse,
+                        tms_update = NOW()
+                    WHERE id_compte = v_id_journal;
+                    
+                    IF p_debug THEN
+                        RAISE NOTICE '    ✓ Journal mis à jour: Crédit % → %, Débit % → %',
+                            v_total_credit, v_achats, v_total_debit, v_encaisse;
+                    END IF;
+                    
+                    operation := 'JOURNAL_MIS_À_JOUR';
+                    statut := format('Journal mis à jour: Crédit %s→%s, Débit %s→%s', 
+                        v_total_credit, v_achats, v_total_debit, v_encaisse);
+                ELSE
+                    IF p_debug THEN
+                        RAISE NOTICE '    ✓ Journal déjà à jour';
+                    END IF;
+                    
+                    operation := 'JOURNAL_OK';
+                    statut := 'Journal déjà à jour';
+                END IF;
+            ELSE
+                -- Ne créer une entrée que si le montant des achats est > 0
+                IF v_achats > 0 THEN
+                    INSERT INTO journal_compte (
+                        id_boul, 
+                        date_mouv, 
+                        type_acteur, 
+                        description, 
+                        id_acteur, 
+                        mt_credit, 
+                        mt_debit, 
+                        id_agent, 
+                        id_site, 
+                        id_vente, 
+                        tms_create,
+                        tms_update
+                    ) VALUES (
+                        v_vente.id_boul, 
+                        v_vente.date_vente, 
+                        'C', 
+                        'Vente numero ' || v_vente.id_vente, 
+                        v_client.id_client, 
+                        v_achats, 
+                        v_encaisse, 
+                        v_vente.id_agent, 
+                        v_vente.id_site, 
+                        v_vente.id_vente,
+                        NOW(),
+                        NOW()
+                    );
+                    
+                    IF p_debug THEN
+                        RAISE NOTICE '    ✓ Journal créé: Crédit=%, Débit=%', v_achats, v_encaisse;
+                    END IF;
+                    
+                    operation := 'JOURNAL_CRÉÉ';
+                    statut := format('Nouvelle entrée créée: Crédit=%s, Débit=%s', v_achats, v_encaisse);
+                ELSE
+                    IF p_debug THEN
+                        RAISE NOTICE '    ! Pas d''entrée journal créée (achats = 0)';
+                    END IF;
+                    
+                    operation := 'JOURNAL_IGNORÉ';
+                    statut := 'Pas d''entrée créée (achats = 0)';
+                END IF;
+            END IF;
+            
+            -- Retourner les résultats pour ce client
+            vente_id := v_vente.id_vente;
+            client_id := v_client.id_client;
+            client_nom := v_nom_client;
+            total_achats := v_achats;
+            total_encaisse := v_encaisse;
+            
+            RETURN NEXT;
+        END LOOP;
+        
+        -- 5. Mise à jour des totaux dans la table vente
+        IF v_total_facture <> v_vente.montant_initial OR v_total_caisse <> v_vente.encaisse_initial THEN
+            UPDATE vente
+            SET 
+                montant = v_total_facture,
+                montant_encaisse = v_total_caisse,
+                id_agent_update = v_vente.id_agent,
+                tms_update = NOW()
+            WHERE id_vente = v_vente.id_vente;
+            
+            IF p_debug THEN
+                RAISE NOTICE '  ✓ Vente #% mise à jour: Montant %→%, Encaissé %→%',
+                    v_vente.id_vente, v_vente.montant_initial, v_total_facture,
+                    v_vente.encaisse_initial, v_total_caisse;
+            END IF;
+            
+            operation := 'VENTE_MISE_À_JOUR';
+            vente_id := v_vente.id_vente;
+            client_id := NULL;
+            client_nom := NULL;
+            total_achats := v_total_facture;
+            total_encaisse := v_total_caisse;
+            statut := format('Totaux mis à jour: Montant %s→%s, Encaissé %s→%s',
+                v_vente.montant_initial, v_total_facture,
+                v_vente.encaisse_initial, v_total_caisse);
+            
+            RETURN NEXT;
+        ELSE
+            IF p_debug THEN
+                RAISE NOTICE '  ✓ Vente #% déjà à jour: Montant=%, Encaissé=%',
+                    v_vente.id_vente, v_total_facture, v_total_caisse;
+            END IF;
+        END IF;
+    END LOOP;
+
+    -- Log de fin
+    IF p_debug THEN
+        RAISE NOTICE '====== FIN RÉGULARISATION - DURÉE: % ======', 
+            clock_timestamp() - v_start_time;
+        RAISE NOTICE 'RÉSUMÉ: % client(s) traité(s)',
+            v_clients_count;
+    END IF;
+    
+    -- Récapitulatif final
+    operation := 'RÉCAPITULATIF';
+    vente_id := NULL;
+    client_id := NULL;
+    client_nom := NULL;
+    total_achats := NULL;
+    total_encaisse := NULL;
+    statut := format('Traitement terminé: %s client(s) traité(s), durée: %s',
+        v_clients_count, extract(epoch from (clock_timestamp() - v_start_time)));
+    
+    RETURN NEXT;
+    
+    RETURN;
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE WARNING 'ERREUR: % (code: %)', SQLERRM, SQLSTATE;
+        
+        operation := 'ERREUR';
+        vente_id := NULL;
+        client_id := NULL;
+        client_nom := NULL;
+        total_achats := NULL;
+        total_encaisse := NULL;
+        statut := format('Erreur: %s (code: %s)', SQLERRM, SQLSTATE);
+        
+        RETURN NEXT;
+        RETURN;
+END;
+$function$
+;
+--Exemple :SELECT regulariser_comptes_clients_v2(p_id_client:=119, p_date_min := '2025-05-06', p_date_max := '2025-05-06');
