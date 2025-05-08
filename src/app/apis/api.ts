@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.NODE_ENV === 'development'
   ? 'http://154.12.224.173:8080'
-  : 'http://154.12.224.173:8080';
+  : 'https://psqlv1-a596b59b1413.herokuapp.com';
 
 export class ApiError extends Error {
   constructor(message: string) {
