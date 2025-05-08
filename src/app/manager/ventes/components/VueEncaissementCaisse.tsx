@@ -269,7 +269,14 @@ const VueEncaissementCaisse: React.FC<VueEncaissementCaisseProps> = ({
               <input
                 type="date"
                 value={format(filterOptions.dateDebut, 'yyyy-MM-dd')}
-                onChange={(e) => filterOptions.setDateDebut(new Date(e.target.value))}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    // Créer la date en préservant le fuseau horaire local
+                    const [year, month, day] = e.target.value.split('-').map(Number);
+                    const newDate = new Date(year, month - 1, day, 12, 0, 0);
+                    filterOptions.setDateDebut(newDate);
+                  }
+                }}
                 className="border text-gray-500 p-2 rounded text-sm focus:ring-red-500 focus:border-red-500 w-full"
               />
             </div>
@@ -283,7 +290,14 @@ const VueEncaissementCaisse: React.FC<VueEncaissementCaisseProps> = ({
               <input
                 type="date"
                 value={format(filterOptions.dateFin, 'yyyy-MM-dd')}
-                onChange={(e) => filterOptions.setDateFin(new Date(e.target.value))}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    // Créer la date en préservant le fuseau horaire local
+                    const [year, month, day] = e.target.value.split('-').map(Number);
+                    const newDate = new Date(year, month - 1, day, 12, 0, 0);
+                    filterOptions.setDateFin(newDate);
+                  }
+                }}
                 className="border text-gray-500 p-2 rounded text-sm focus:ring-red-500 focus:border-red-500 w-full"
               />
             </div>

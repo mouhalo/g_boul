@@ -13,13 +13,14 @@ import VisuelVenteModal from '@/app/manager/ventes/VisuelVenteModal';
 import { format } from 'date-fns';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ShoppingBag, Package, BarChart, Loader2, TrendingUp } from 'lucide-react';
+import { Plus, ShoppingBag, Package, BarChart, Loader2, TrendingUp, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter,DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Importation des composants pour chaque onglet
 import SuiviVentesTab from '@/app/manager/ventes/components/SuiviVentesTab';
 import ArticlesVendusTab from '@/app/manager/ventes/components/ArticlesVendusTab';
 import VueEncaissementCaisse from '@/app/manager/ventes/components/VueEncaissementCaisse';
+import ClientsTab from '@/app/manager/ventes/components/ClientsTab';
 import PageConstruction from '@/app/components/PageConstruction';
 
 // Types
@@ -568,7 +569,7 @@ useEffect(() => {
 
       {/* Onglets */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="ventes" className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4" /> Suivi ventes
           </TabsTrigger>
@@ -577,6 +578,9 @@ useEffect(() => {
           </TabsTrigger>
           <TabsTrigger value="encaissements" className="flex items-center gap-2">
             <BarChart className="h-4 w-4" /> Encaissements
+          </TabsTrigger>
+          <TabsTrigger value="clients" className="flex items-center gap-2">
+            <Users className="h-4 w-4" /> Clients
           </TabsTrigger>
           <TabsTrigger value="rendements" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" /> Rendements
@@ -627,6 +631,14 @@ useEffect(() => {
         {/* Contenu de l'onglet "Encaissements" */}
         <TabsContent value="encaissements" className="mt-4">
           <VueEncaissementCaisse
+            isLoading={isLoading}
+            filterOptions={filterOptions}
+          />
+        </TabsContent>
+
+        {/* Contenu de l'onglet "Clients" */}
+        <TabsContent value="clients" className="mt-4">
+          <ClientsTab
             isLoading={isLoading}
             filterOptions={filterOptions}
           />
