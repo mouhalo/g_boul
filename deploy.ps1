@@ -85,20 +85,38 @@ catch {
     exit
 }
 
-Write-Output "Connexion au serveur $SERVER_IP en tant que $SERVER_USER..."
-Write-Output "Exécution des commandes de déploiement sur le serveur..."
+# Afficher les commandes à exécuter manuellement pour le déploiement sur le serveur
+Write-ColorOutput Yellow "Pour vous connecter manuellement au serveur et déployer, exécutez:"
+Write-Output "ssh $SERVER_USER@$SERVER_IP"
+Write-Output "Puis, une fois connecté, exécutez:"
+Write-Output "cd $SERVER_PATH && git pull && npm install && npm run build && pm2 restart $APP_NAME"
+Write-Output ""
 
-# Commande SSH pour exécuter le déploiement sur le serveur
-ssh "$SERVER_USER@$SERVER_IP" "cd $SERVER_PATH && git pull && npm install && npm run build && pm2 restart $APP_NAME"
+# Demander si l'utilisateur veut tenter la connexion automatique
+$tryConnect = Read-Host "Voulez-vous tenter la connexion SSH au serveur? (O/N)"
 
-if ($LASTEXITCODE -ne 0) {
-    Write-ColorOutput Red "ERREUR: Problème lors de la connexion au serveur ou de l'exécution des commandes."
-    Write-Output "Vérifiez vos identifiants, l'adresse IP et que le serveur est accessible."
-    exit
-}
-else {
-    Write-ColorOutput Green "Déploiement sur le serveur réussi!"
-    Write-Output "L'application est maintenant à jour sur http://$SERVER_IP:3000"
+if ($tryConnect -eq "O" -or $tryConnect -eq "o") {
+    # Demander le nom d'utilisateur
+    $sshUser = Read-Host "Entrez le nom d'utilisateur pour la connexion SSH (par défaut: $SERVER_USER)"
+    if ([string]::IsNullOrEmpty($sshUser)) {
+        $sshUser = $SERVER_USER
+    }
+    
+    Write-Output "Connexion au serveur $SERVER_IP en tant que $sshUser..."
+    Write-Output "Exécution des commandes de déploiement sur le serveur..."
+    
+    # Commande SSH pour exécuter le déploiement sur le serveur
+    ssh "$sshUser@$SERVER_IP" "cd $SERVER_PATH && git pull && npm install && npm run build && pm2 restart $APP_NAME"
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput Red "ERREUR: Problème lors de la connexion au serveur ou de l'exécution des commandes."
+        Write-Output "Vérifiez vos identifiants, l'adresse IP et que le serveur est accessible."
+        exit
+    }
+    else {
+        Write-ColorOutput Green "Déploiement sur le serveur réussi!"
+        Write-Output "L'application est maintenant à jour sur http://$SERVER_IP:3000"
+    }
 }
 
 # Fin du script
