@@ -91,7 +91,6 @@ const DetailsEncaissementModal: React.FC<DetailsEncaissementModalProps> = ({
           WHERE v.id_client = ${clientId}
           AND v.date_op BETWEEN '${format(dateDebut, 'yyyy-MM-dd')}' AND '${format(dateFin, 'yyyy-MM-dd')}'
           AND v.id_site = ${siteId}
-          AND (v.total - COALESCE(v.mt_encaisse, 0)) > 0
           ORDER BY v.date_op ASC, v.id_vente ASC, v.id_detail ASC
         `;
         
