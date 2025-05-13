@@ -460,7 +460,7 @@ const VueEncaissementCaisse: React.FC<VueEncaissementCaisseProps> = ({
           siteId={selectedEncaissement.id_site}
           dateDebut={filterOptions.dateDebut}
           dateFin={filterOptions.dateFin}
-          totalAchats={selectedEncaissement.total_achats}
+          totalAchats={stats.totalAchats}
         />
       )}
     </div>
